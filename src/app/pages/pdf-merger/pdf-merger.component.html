@@ -1,0 +1,6 @@
+<div class="container">
+    <h2>PDF Merger</h2>
+    <input type="file" (change)="onFilesSelected($event)" multiple accept="application/pdf" class="form-control">
+    <button (click)="mergePdfs()" class="btn btn-success mt-2">Merge PDFs</button>
+  </div>
+  

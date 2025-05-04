@@ -1,0 +1,7 @@
+<div class="container">
+    <h2>PDF Splitter</h2>
+    <input type="file" (change)="onFileSelected($event)" accept="application/pdf" class="form-control">
+    <input type="number" [(ngModel)]="pagesPerFile" placeholder="Pages per file" class="form-control mt-2">
+    <button (click)="splitPdf()" class="btn btn-primary mt-2">Split PDF</button>
+  </div>
+  

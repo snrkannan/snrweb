@@ -1,0 +1,67 @@
+<div>
+  <button (click)="toggleInputMode()">
+    {{ excelInput ? 'Switch to Manual Input' : 'Switch to Excel Input' }}
+  </button>
+</div>
+
+<div *ngIf="excelInput">
+  <input type="file" (change)="onFileChange($event)" accept=".xlsx, .xls">
+</div>
+
+<div *ngIf="!excelInput">
+  <h3>Across Clues</h3>
+  <div *ngFor="let acrossClue of acrossClues; let i = index">
+    <label>Number:</label> <input type="number" [(ngModel)]="acrossClues[i].number">
+    <label>Clue:</label> <input type="text" [(ngModel)]="acrossClues[i].clue">
+    <label>Answer:</label> <input type="text" [(ngModel)]="acrossClues[i].answer">
+  </div>
+  <button (click)="addAcrossClue()">Add Across Clue</button>
+
+  <h3>Down Clues</h3>
+  <div *ngFor="let downClue of downClues; let i = index">
+    <label>Number:</label> <input type="number" [(ngModel)]="downClues[i].number">
+    <label>Clue:</label> <input type="text" [(ngModel)]="downClues[i].clue">
+    <label>Answer:</label> <input type="text" [(ngModel)]="downClues[i].answer">
+  </div>
+  <button (click)="addDownClue()">Add Down Clue</button>
+
+  <button (click)="generateCrossword()">Generate Crossword</button>
+</div>
+
+<div *ngIf="crossword" #crosswordContainer>
+  <table style="border-collapse: collapse; border: 1px solid black;">
+    <tr *ngFor="let row of crossword.grid; let i = index">
+      <td *ngFor="let cell of row; let j = index"
+          [style.width.px]="30"
+          [style.height.px]="30"
+          [style.border]="'1px solid black'"
+          [style.textAlign]="'center'"
+          [style.backgroundColor]="cell === '#' ? 'black' : 'white'">
+          <span *ngIf="getNumber(i, j) !== 0">{{ getNumber(i, j) }}</span>
+          <input *ngIf="cell !== '#'" type="text" maxlength="1" style="width: 25px; border: none; text-transform: uppercase;">
+      </td>
+    </tr>
+  </table>
+
+  <div>
+    <h3>Across</h3>
+    <ol>
+      <li *ngFor="let clue of crossword.across">
+        {{ clue.number }}. {{ clue.clue }}
+      </li>
+    </ol>
+  </div>
+
+  <div>
+    <h3>Down</h3>
+    <ol>
+      <li *ngFor="let clue of crossword.down">
+        {{ clue.number }}. {{ clue.clue }}
+      </li>
+    </ol>
+  </div>
+</div>
+<div *ngIf="crossword">
+  <button (click)="generatePDF()">Generate PDF</button>
+  <button (click)="exportToExcel()">Export to Excel</button>
+</div>
