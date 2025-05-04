@@ -1,6 +1,14 @@
 <div class="container">
-    <h2>PDF Merger</h2>
-    <input type="file" (change)="onFilesSelected($event)" multiple accept="application/pdf" class="form-control">
-    <button (click)="mergePdfs()" class="btn btn-success mt-2">Merge PDFs</button>
+  <h2>PDF Merger</h2>
+
+  <input type="file" (change)="onFilesSelected($event)" multiple accept="application/pdf" />
+
+  <div *ngIf="pdfFiles.length > 0" class="mt-3">
+    <div *ngFor="let file of pdfFiles; let i = index" class="mb-2">
+      <strong>{{ file.name }}</strong>
+      <input type="number" [(ngModel)]="file.order" class="form-control d-inline-block ml-2" style="width: 80px;" />
+    </div>
+
+    <button (click)="mergePdfs()" class="btn btn-primary mt-3">Merge PDFs</button>
   </div>
-  
+</div>

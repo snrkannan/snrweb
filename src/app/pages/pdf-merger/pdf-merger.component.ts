@@ -7,45 +7,35 @@ import { PDFDocument } from 'pdf-lib';
   styleUrls: ['./pdf-merger.component.scss']
 })
 export class PdfMergerComponent {
-  selectedFiles: File[] = [];
+  pdfFiles: { file: File; name: string; order: number }[] = [];
 
-  onFilesSelected(event: Event) {
-    const input = event.target as HTMLInputElement;
-    if (input.files) {
-      this.selectedFiles = Array.from(input.files);
+  onFilesSelected(event: any) {
+    const files: FileList = event.target.files;
+    this.pdfFiles = [];
+
+    for (let i = 0; i < files.length; i++) {
+      this.pdfFiles.push({ file: files[i], name: files[i].name, order: i + 1 });
     }
   }
 
   async mergePdfs() {
-    if (this.selectedFiles.length < 2) {
-      alert('Please select at least two PDFs to merge.');
-      return;
-    }
-
+    const sortedFiles = this.pdfFiles.sort((a, b) => a.order - b.order);
     const mergedPdf = await PDFDocument.create();
-    for (const file of this.selectedFiles) {
-      const reader = new FileReader();
-      reader.readAsArrayBuffer(file);
-      await new Promise<void>((resolve) => {
-        reader.onload = async () => {
-          const pdf = await PDFDocument.load(reader.result as ArrayBuffer);
-          const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
-          copiedPages.forEach((page) => mergedPdf.addPage(page));
-          resolve();
-        };
-      });
+
+    for (const { file } of sortedFiles) {
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await PDFDocument.load(arrayBuffer);
+      const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+      copiedPages.forEach(page => mergedPdf.addPage(page));
     }
 
     const mergedPdfBytes = await mergedPdf.save();
-    this.downloadPdf(mergedPdfBytes, 'merged.pdf');
-  }
-
-  downloadPdf(data: Uint8Array, filename: string) {
-    const blob = new Blob([data], { type: 'application/pdf' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = filename;
-    link.click();
-    URL.revokeObjectURL(link.href);
+    const blob = new Blob([mergedPdfBytes], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'merged.pdf';
+    a.click();
+    URL.revokeObjectURL(url);
   }
 }
