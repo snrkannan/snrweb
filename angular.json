@@ -52,7 +52,8 @@
               ],
               "optimization": true,
             "outputPath": "docs",
-              "outputHashing": "all"
+              "outputHashing": "all",
+              "baseHref": "/snrweb/"
             },
             "development": {
               "buildOptimizer": false,
