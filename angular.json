@@ -50,6 +50,8 @@
                   "maximumError": "100mb"
                 }
               ],
+              "optimization": true,
+            "outputPath": "docs",
               "outputHashing": "all"
             },
             "development": {
