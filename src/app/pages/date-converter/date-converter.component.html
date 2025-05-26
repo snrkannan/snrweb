@@ -1,0 +1,14 @@
+<div class="converter">
+    <h2>Date to Milliseconds</h2>
+    <input type="datetime-local" [(ngModel)]="dateInput">
+    <button (click)="convertDateToMillis()">Convert to Milliseconds</button>
+    <p *ngIf="milliseconds !== null">Milliseconds: {{ milliseconds }}</p>
+  
+    <hr>
+  
+    <h2>Milliseconds to Date</h2>
+    <input type="text" [(ngModel)]="millisInput" placeholder="Enter milliseconds">
+    <button (click)="convertMillisToDate()">Convert to Date</button>
+    <p *ngIf="convertedDate">Converted Date: {{ convertedDate }}</p>
+  </div>
+  

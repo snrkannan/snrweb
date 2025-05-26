@@ -22,6 +22,8 @@ import { FormsModule } from '@angular/forms';
 import { PdfMergerComponent } from './pages/pdf-merger/pdf-merger.component';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { CrosswordPuzzleComponent } from './pages/crossword-puzzle/crossword-puzzle.component';
+import { DateConverterComponent } from './pages/date-converter/date-converter.component';
+import { ExpenseTrackerComponent } from './pages/expense-tracker/expense-tracker.component';
 
 @NgModule({
   declarations: [
@@ -33,7 +35,9 @@ import { CrosswordPuzzleComponent } from './pages/crossword-puzzle/crossword-puz
     AboutComponent,
     PdfSplitterComponent,
     PdfMergerComponent,
-    CrosswordPuzzleComponent
+    CrosswordPuzzleComponent,
+    DateConverterComponent,
+    ExpenseTrackerComponent
   ],
   imports: [
     BrowserModule,
