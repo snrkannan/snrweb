@@ -1,0 +1,23 @@
+<div style="margin-bottom: 1rem;">
+    
+  <input type="file" (change)="onFolderSelect($event)" webkitdirectory directory multiple />
+  <button mat-raised-button color="primary" (click)="toggleSort()">
+    Sort by Size {{ sortAsc ? '(Asc)' : '(Desc)' }}
+  </button>
+</div>
+
+<mat-tree [dataSource]="dataSource" [treeControl]="treeControl">
+  <mat-tree-node *matTreeNodeDef="let node; when: hasChild" matTreeNodePadding>
+    <button mat-icon-button matTreeNodeToggle>
+      <mat-icon>
+        {{ treeControl.isExpanded(node) ? 'expand_more' : 'chevron_right' }}
+      </mat-icon>
+    </button>
+    📁 {{ node.name }} ({{ node.size | fileSize }})
+  </mat-tree-node>
+
+  <mat-tree-node *matTreeNodeDef="let node" matTreeNodePadding>
+    <button mat-icon-button disabled></button>
+    📄 {{ node.name }} ({{ node.size | fileSize }})
+  </mat-tree-node>
+</mat-tree>

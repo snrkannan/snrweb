@@ -1,0 +1,72 @@
+<!-- file-explorer.component.html -->
+<div class="p-6 max-w-2xl mx-auto bg-white rounded-xl shadow-lg space-y-4">
+  <h2 class="text-2xl font-bold text-center text-gray-800">File Explorer</h2>
+
+  <div class="flex items-center space-x-2 mb-4">
+    <mat-form-field appearance="fill" class="flex-grow">
+      <mat-label>Choose Location</mat-label>
+      <mat-select [(ngModel)]="selectedRootFolderId" (selectionChange)="selectRootFolder($event.value)">
+        <mat-option *ngFor="let root of rootFileSystems" [value]="root.id">
+          {{ root.name }}
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <button mat-button (click)="goBack()" [disabled]="currentPath.length === 0"
+            class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md shadow-sm hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed">
+      <mat-icon>arrow_back</mat-icon> Back
+    </button>
+  </div>
+
+  <span class="text-lg font-medium text-gray-700 mb-4 block">
+    Current Path: /{{ displayCurrentPath }}
+  </span>
+
+  <div class="flex space-x-2 mb-4">
+    <button mat-flat-button (click)="sort('name')"
+            [color]="sortColumn === 'name' ? 'primary' : undefined">
+      Name
+      <mat-icon *ngIf="sortColumn === 'name'">{{ sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+    </button>
+    <button mat-flat-button (click)="sort('size')"
+            [color]="sortColumn === 'size' ? 'primary' : undefined">
+      Size
+      <mat-icon *ngIf="sortColumn === 'size'">{{ sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+    </button>
+  </div>
+
+  <mat-tree [dataSource]="dataSource" [treeControl]="treeControl" class="w-full">
+    <!-- This is the tree node template for expandable folders -->
+    <mat-tree-node *matTreeNodeDef="let node; when: hasChild" matTreeNodeToggle>
+      <li class="mat-tree-node flex items-center w-full py-2 px-4 hover:bg-gray-50 rounded-md">
+        <button mat-icon-button matTreeNodeToggle
+                class="mr-1">
+          <mat-icon class="mat-icon-rtl-mirror">
+            {{ treeControl.isExpanded(node) ? 'folder_open' : 'folder' }}
+          </mat-icon>
+        </button>
+        <a (click)="goToFolder(node)" class="flex-grow cursor-pointer text-blue-600 hover:underline">
+          {{ node.name }}
+        </a>
+        <span class="text-gray-700 text-sm ml-auto">{{ formatBytes(node.size) }}</span>
+      </li>
+    </mat-tree-node>
+
+    <!-- This is the tree node template for files (leaf nodes) -->
+    <mat-tree-node *matTreeNodeDef="let node; when: !hasChild">
+      <li class="mat-tree-node flex items-center w-full py-2 px-4 hover:bg-gray-50 rounded-md">
+        <button mat-icon-button disabled class="mr-1">
+          <mat-icon>insert_drive_file</mat-icon>
+        </button>
+        <span class="flex-grow text-gray-900">
+          {{ node.name }}
+        </span>
+        <span class="text-gray-700 text-sm ml-auto">{{ formatBytes(node.size) }}</span>
+      </li>
+    </mat-tree-node>
+  </mat-tree>
+
+  <div *ngIf="treeControl.dataNodes.length === 0" class="text-center text-gray-500 p-4">
+    This folder is empty.
+  </div>
+</div>

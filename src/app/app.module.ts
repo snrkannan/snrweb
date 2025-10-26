@@ -24,6 +24,11 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { CrosswordPuzzleComponent } from './pages/crossword-puzzle/crossword-puzzle.component';
 import { DateConverterComponent } from './pages/date-converter/date-converter.component';
 import { ExpenseTrackerComponent } from './pages/expense-tracker/expense-tracker.component';
+import { FolderTreeComponent } from './pages/folder-tree/folder-tree.component';
+import { CdkTreeModule } from '@angular/cdk/tree';
+import { MatTreeModule } from '@angular/material/tree';
+import { FileSizePipe } from './file-size.pipe';
+import { FileExplorerComponent } from './pages/file-explorer/file-explorer.component';
 
 @NgModule({
   declarations: [
@@ -32,12 +37,15 @@ import { ExpenseTrackerComponent } from './pages/expense-tracker/expense-tracker
     FooterComponent,
     SidenavComponent,
     LayoutComponent,
-    AboutComponent,
+    AboutComponent, 
     PdfSplitterComponent,
     PdfMergerComponent,
     CrosswordPuzzleComponent,
     DateConverterComponent,
-    ExpenseTrackerComponent
+    ExpenseTrackerComponent,
+    FolderTreeComponent,
+    FileSizePipe,
+    FileExplorerComponent
   ],
   imports: [
     BrowserModule,
@@ -50,8 +58,14 @@ import { ExpenseTrackerComponent } from './pages/expense-tracker/expense-tracker
     MatListModule,
     MatButtonModule,
     MatIconModule,
-    MatExpansionModule // Add this
-  ],
+    MatExpansionModule,
+    CdkTreeModule,
+     MatTreeModule,
+     MatTreeModule,
+    MatIconModule,
+    MatButtonModule,
+    MatToolbarModule,
+       ],
   providers: [],
   bootstrap: [AppComponent]
 })

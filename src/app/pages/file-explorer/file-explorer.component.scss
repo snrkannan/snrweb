@@ -1,0 +1,32 @@
+/* file-explorer.component.scss */
+
+// Import Tailwind directives
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+// Apply some basic styles to the host component if needed
+:host {
+  display: block;
+  // Ensure the component takes full width if placed inside a container
+  @apply w-full;
+}
+
+// Custom styles for Mat-Tree nodes if necessary,
+// otherwise rely on Material's default styling and Tailwind classes in HTML.
+.mat-tree-node {
+  border-bottom: 1px solid theme('colors.gray.100'); // Example of using theme function
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+// Styles for active button state (optional, if you want more visual feedback)
+button[mat-flat-button][color="primary"] {
+  @apply bg-blue-500 text-white; // Example of applying Tailwind classes
+}
+
+button[mat-flat-button] {
+  @apply transition-colors duration-200 ease-in-out;
+}
+ 
