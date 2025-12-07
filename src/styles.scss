@@ -5,3 +5,22 @@ body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
 
 html, body { height: 100%; }
 body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
+
+/* src/styles.css */
+
+/* 1. Define the custom font */
+@font-face {
+  font-family: 'CursiveHandwriting';
+  src: url('assets/fonts/CursiveFont.ttf') format('truetype'); /* Update path and file name */
+  font-weight: normal;
+  font-style: normal;
+}
+
+/* 2. Apply the font to the specific class used in the component's HTML */
+.cursive-text {
+  font-family: 'CursiveHandwriting', cursive;
+  font-size: 20px; 
+  color: gainsboro;
+  line-height: 1.5; /* Spacing for better handwriting look */
+  white-space: pre-wrap; /* Preserves formatting (newlines) */
+}

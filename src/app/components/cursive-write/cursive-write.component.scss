@@ -1,0 +1,37 @@
+.pdf-container {
+  padding: 20px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  max-width: 600px;
+  margin: 20px auto;
+}
+
+textarea {
+  width: 100%;
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+button {
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+button:disabled {
+  background-color: #a0c3ff;
+  cursor: not-allowed;
+}
+
+.pdf-content {
+  /* This boundary helps html2canvas capture the intended area */
+  border: 1px solid #e0e0e0;
+  padding: 15px;
+  margin-bottom: 20px;
+  background-color: #fff;
+  /* Width for consistency with PDF output */
+  width: 560px; 
+}

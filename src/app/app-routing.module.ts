@@ -8,11 +8,14 @@ import { DateConverterComponent } from './pages/date-converter/date-converter.co
 import { ExpenseTrackerComponent } from './pages/expense-tracker/expense-tracker.component';
 import { FolderTreeComponent } from './pages/folder-tree/folder-tree.component';
 import { FileExplorerComponent } from './pages/file-explorer/file-explorer.component';
+import { CursiveWriteComponent } from './components/cursive-write/cursive-write.component';
 
 const routes: Routes = [
   { path: 'about', component: AboutComponent },
   { path: 'pdf-splitter', component: PdfSplitterComponent },
   { path: 'pdf-merger', component: PdfMergerComponent },  // Add this line
+  { path: 'cursive-write', component: CursiveWriteComponent },  // Add this line
+ 
   { path: 'crossword-puzzle', component: CrosswordPuzzleComponent },  // Added
   { path: 'date-Converter', component: DateConverterComponent },  // Added
   { path: 'expense-tracker', component: ExpenseTrackerComponent },  // Added

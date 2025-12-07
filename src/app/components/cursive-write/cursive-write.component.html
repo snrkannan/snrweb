@@ -1,0 +1,20 @@
+<div class="pdf-container">
+  <h2>Cursive PDF Generator</h2>
+
+  <textarea
+    [(ngModel)]="pdfText"
+    rows="10"
+    cols="60"
+    placeholder="Enter the text you want in the PDF..."
+    style="margin-bottom: 20px;"
+  ></textarea>
+
+  <div #pdfContent class="pdf-content">
+    <h3>Cursive Text Preview:</h3>
+    <p class="cursive-text">{{ pdfText }}</p>
+  </div>
+
+  <button (click)="generatePdf()" [disabled]="!pdfText">
+    ⬇️ Generate Cursive PDF
+  </button>
+</div>

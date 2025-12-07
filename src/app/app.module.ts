@@ -29,6 +29,8 @@ import { CdkTreeModule } from '@angular/cdk/tree';
 import { MatTreeModule } from '@angular/material/tree';
 import { FileSizePipe } from './file-size.pipe';
 import { FileExplorerComponent } from './pages/file-explorer/file-explorer.component';
+import { ColorActionComponent } from './components/color-action/color-action.component';
+import { CursiveWriteComponent } from './components/cursive-write/cursive-write.component';
 
 @NgModule({
   declarations: [
@@ -45,7 +47,9 @@ import { FileExplorerComponent } from './pages/file-explorer/file-explorer.compo
     ExpenseTrackerComponent,
     FolderTreeComponent,
     FileSizePipe,
-    FileExplorerComponent
+    FileExplorerComponent,
+    ColorActionComponent,
+    CursiveWriteComponent
   ],
   imports: [
     BrowserModule,
