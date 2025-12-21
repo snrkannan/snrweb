@@ -1,26 +1,36 @@
 /* You can add global styles to this file, and also import other style files */
-
+@import "assets/fonts/generated-fonts";
 html, body { height: 100%; }
 body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
 
 html, body { height: 100%; }
 body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
 
-/* src/styles.css */
+/* src/styles.scss */
 
-/* 1. Define the custom font */
+// Import Google Fonts for variety
+@import url('https://fonts.googleapis.com/css2?family=Alex+Brush&family=Dancing+Script&family=Great+Vibes&family=Satisfy&display=swap');
+
+// You can still keep your local font if you have one
 @font-face {
-  font-family: 'CursiveHandwriting';
-  src: url('assets/fonts/CursiveFont.ttf') format('truetype'); /* Update path and file name */
+  font-family: 'LocalCursive';
+  src: url('assets/fonts/LearningCurve.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
 }
 
-/* 2. Apply the font to the specific class used in the component's HTML */
 .cursive-text {
-  font-family: 'CursiveHandwriting', cursive;
-  font-size: 20px; 
-  color: gainsboro;
-  line-height: 1.5; /* Spacing for better handwriting look */
-  white-space: pre-wrap; /* Preserves formatting (newlines) */
+  // Use the CSS variable --selected-font set by the component
+  font-family: var(--selected-font, 'Great Vibes'), cursive;
+  font-size: var(--cursive-size, 24px); 
+  line-height: var(--cursive-line-height, 1.8); 
+  color: var(--cursive-color, #205634); 
+  
+  white-space: pre-wrap;
+  margin: 0;
+  padding: 10px; 
+  z-index: 2; 
+  position: relative; 
 }
+
+// ... (keep the .ruled-lines styles from the previous step)

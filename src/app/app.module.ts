@@ -31,6 +31,7 @@ import { FileSizePipe } from './file-size.pipe';
 import { FileExplorerComponent } from './pages/file-explorer/file-explorer.component';
 import { ColorActionComponent } from './components/color-action/color-action.component';
 import { CursiveWriteComponent } from './components/cursive-write/cursive-write.component';
+import { provideHttpClient } from '@angular/common/http';
 
 @NgModule({
   declarations: [
@@ -70,7 +71,7 @@ import { CursiveWriteComponent } from './components/cursive-write/cursive-write.
     MatButtonModule,
     MatToolbarModule,
        ],
-  providers: [],
+  providers: [provideHttpClient(),],
   bootstrap: [AppComponent]
 })
 export class AppModule { }

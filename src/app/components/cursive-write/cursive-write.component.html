@@ -1,20 +1,101 @@
-<div class="pdf-container">
-  <h2>Cursive PDF Generator</h2>
+<div class="main-container">
+  <aside class="editor-panel">
+    <h3>Design Controls</h3>
 
-  <textarea
-    [(ngModel)]="pdfText"
-    rows="10"
-    cols="60"
-    placeholder="Enter the text you want in the PDF..."
-    style="margin-bottom: 20px;"
-  ></textarea>
+    <textarea [(ngModel)]="pdfText" (input)="saveSettings()" placeholder="Write practice text..."></textarea>
+    
+    <div class="control-group">
+      <label>Page Layout</label>
+      <div class="checkbox-grid">
+        <label><input type="checkbox" [(ngModel)]="showHeader" (ngModelChange)="saveSettings()"> Header</label>
+        <label><input type="checkbox" [(ngModel)]="showFooter" (ngModelChange)="saveSettings()"> Footer</label>
+        <label><input type="checkbox" [(ngModel)]="showLines" (ngModelChange)="updateGridHelpers()"> Rows</label>
+        <label><input type="checkbox" [(ngModel)]="showColumnLines" (ngModelChange)="updateGridHelpers()"> Columns</label>
+      </div>
+    </div>
 
-  <div #pdfContent class="pdf-content">
-    <h3>Cursive Text Preview:</h3>
-    <p class="cursive-text">{{ pdfText }}</p>
+    <div class="control-group">
+  <label>Font Style</label>
+  <div class="custom-dropdown-container">
+    
+    <div class="dropdown-trigger" 
+         (click)="isDropdownOpen = !isDropdownOpen" 
+         [style.font-family]="selectedFont">
+      {{ selectedFontName }} 
+      <span class="arrow">▼</span>
+    </div>
+
+    <div class="dropdown-list" *ngIf="isDropdownOpen">
+      <button class="btn-load-sys" (click)="loadSystemFonts()">Load System Fonts</button>
+      <div class="options-wrapper">
+        <div *ngFor="let f of fontOptions" 
+             class="font-option" 
+             [style.font-family]="f.value" 
+             (click)="selectFont(f)">
+          {{ f.name }}
+        </div>
+      </div>
+    </div>
+
   </div>
+</div>
 
-  <button (click)="generatePdf()" [disabled]="!pdfText">
-    ⬇️ Generate Cursive PDF
-  </button>
+    <div class="control-group">
+      <label>Typography (Size & Letter Spacing)</label>
+      <input type="range" min="12" max="60" [(ngModel)]="fontSize" (ngModelChange)="saveSettings()">
+      <input type="range" min="-2" max="12" step="0.5" [(ngModel)]="letterSpacing" (ngModelChange)="saveSettings()">
+    </div>
+
+    <div class="control-group">
+      <label>Grid Spacing (H / V)</label>
+      <input type="range" min="20" max="80" [(ngModel)]="lineSpacing" (ngModelChange)="updateGridHelpers()">
+      <input type="range" min="10" max="80" [(ngModel)]="columnWidth" (ngModelChange)="updateGridHelpers()">
+    </div>
+
+    <div class="control-group">
+      <label>Ink & Grid Colors</label>
+      <div class="color-grid">
+        <div class="c-item"><input type="color" [(ngModel)]="fontColor" (ngModelChange)="saveSettings()"><small>Ink</small></div>
+        <div class="c-item"><input type="color" [(ngModel)]="headerColor" (ngModelChange)="saveSettings()"><small>Head</small></div>
+        <div class="c-item"><input type="color" [(ngModel)]="hLineColor" (ngModelChange)="saveSettings()"><small>Rows</small></div>
+        <div class="c-item"><input type="color" [(ngModel)]="vLineColor" (ngModelChange)="saveSettings()"><small>Cols</small></div>
+      </div>
+    </div>
+
+    <button class="btn-primary" (click)="generatePdf()">Download PDF</button>
+  </aside>
+
+  <main class="preview-panel">
+    <div *ngFor="let pageContent of pages; let i = index" class="a4-page"
+         [style.--selected-font]="selectedFont" [style.--font-size.px]="fontSize"
+         [style.--letter-spacing.px]="letterSpacing" [style.--ink-color]="fontColor"
+         [style.--header-color]="headerColor" [style.--line-h.px]="lineSpacing"
+         [style.--col-w.px]="columnWidth">
+
+      <header *ngIf="showHeader && i === 0" class="page-header">
+        <img src="assets/logo.jpg" class="main-logo">
+        <div class="meta-row">
+          <div class="field"><span class="lbl">Name:</span> <span class="val">{{userName}}</span></div>
+          <div class="field"><span class="lbl">Date:</span> <span class="val">{{currentDay}}</span></div>
+        </div>
+      </header>
+
+      <div class="page-body">
+        <div class="lines-h" *ngIf="showLines">
+          <div *ngFor="let r of horizontalRows" class="h-row" 
+               [style.height.px]="lineSpacing" [style.border-color]="hLineColor"></div>
+        </div>
+        <div class="lines-v" *ngIf="showColumnLines">
+          <div *ngFor="let c of verticalCols" class="v-col" 
+               [style.width.px]="columnWidth" [style.border-color]="vLineColor"></div>
+        </div>
+        <div class="text-content">{{pageContent}}</div>
+      </div>
+
+      <footer *ngIf="showFooter" class="page-footer">
+        <span>© 2025 Cursive Designer</span>
+        <span>Page {{i + 1}} of {{pages.length}}</span>
+      </footer>
+    </div>
+  </main>
 </div>

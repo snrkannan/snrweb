@@ -1,0 +1,34 @@
+{
+  "assetFonts": [
+    {
+      "name": "Cursive standard Bold",
+      "file": "Cursive standard Bold.ttf",
+      "family": "Cursive standard Bold"
+    },
+    {
+      "name": "Cursive standard",
+      "file": "Cursive standard.ttf",
+      "family": "Cursive standard"
+    },
+    {
+      "name": "CursiveFont",
+      "file": "CursiveFont.ttf",
+      "family": "CursiveFont"
+    },
+    {
+      "name": "Dnealiancursive",
+      "file": "dnealiancursive.ttf",
+      "family": "dnealiancursive"
+    },
+    {
+      "name": "LearningCurve",
+      "file": "LearningCurve.ttf",
+      "family": "LearningCurve"
+    },
+    {
+      "name": "LearningCurveDashed",
+      "file": "LearningCurveDashed.ttf",
+      "family": "LearningCurveDashed"
+    }
+  ]
+}

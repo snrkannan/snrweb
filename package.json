@@ -2,9 +2,10 @@
   "name": "snrweb",
   "version": "0.0.0",
   "scripts": {
-    "ng": "ng",
+    "prestart": "node generate-font-manifest.js",
     "start": "ng serve",
-    "build": "ng build",
+    "build": "node generate-font-manifest.js && ng build",
+    "ng": "ng",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "electron": "electron electron-main.js"
