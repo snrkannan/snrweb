@@ -1,67 +1,122 @@
-<div>
-  <button (click)="toggleInputMode()">
-    {{ excelInput ? 'Switch to Manual Input' : 'Switch to Excel Input' }}
-  </button>
-</div>
+<div class="cw-page">
 
-<div *ngIf="excelInput">
-  <input type="file" (change)="onFileChange($event)" accept=".xlsx, .xls">
-</div>
+  <!-- ── Input Panel ──────────────────────────────────────────────────────── -->
+  <div class="cw-input-panel">
 
-<div *ngIf="!excelInput">
-  <h3>Across Clues</h3>
-  <div *ngFor="let acrossClue of acrossClues; let i = index">
-    <label>Number:</label> <input type="number" [(ngModel)]="acrossClues[i].number">
-    <label>Clue:</label> <input type="text" [(ngModel)]="acrossClues[i].clue">
-    <label>Answer:</label> <input type="text" [(ngModel)]="acrossClues[i].answer">
+    <div class="cw-panel-header">
+      <span>Crossword Builder</span>
+      <button class="btn-sm-outline" (click)="toggleInputMode()">
+        {{ excelInput ? 'Manual Input' : 'Excel Import' }}
+      </button>
+    </div>
+
+    <!-- Excel import -->
+    <div *ngIf="excelInput" class="cw-section">
+      <label class="cw-label">Upload Excel File</label>
+      <input type="file" (change)="onFileChange($event)" accept=".xlsx,.xls" class="cw-file-input">
+      <small class="text-muted">Columns: direction, number, clue, answer</small>
+    </div>
+
+    <!-- Manual input -->
+    <ng-container *ngIf="!excelInput">
+
+      <div class="cw-section">
+        <div class="cw-section-title">
+          <span>Across Clues</span>
+          <button class="btn-icon" (click)="addAcrossClue()" title="Add clue">+</button>
+        </div>
+        <div class="cw-clue-row" *ngFor="let c of acrossClues; let i = index">
+          <span class="cw-num">{{ i + 1 }}</span>
+          <input class="cw-input" [(ngModel)]="c.clue" placeholder="Clue">
+          <input class="cw-input cw-answer" [(ngModel)]="c.answer" placeholder="Answer">
+          <button class="btn-remove" (click)="removeAcrossClue(i)" title="Remove">×</button>
+        </div>
+      </div>
+
+      <div class="cw-section">
+        <div class="cw-section-title">
+          <span>Down Clues</span>
+          <button class="btn-icon" (click)="addDownClue()" title="Add clue">+</button>
+        </div>
+        <div class="cw-clue-row" *ngFor="let c of downClues; let i = index">
+          <span class="cw-num">{{ i + 1 }}</span>
+          <input class="cw-input" [(ngModel)]="c.clue" placeholder="Clue">
+          <input class="cw-input cw-answer" [(ngModel)]="c.answer" placeholder="Answer">
+          <button class="btn-remove" (click)="removeDownClue(i)" title="Remove">×</button>
+        </div>
+      </div>
+
+    </ng-container>
+
+    <div *ngIf="errorMessage" class="cw-error">{{ errorMessage }}</div>
+
+    <div class="cw-actions">
+      <button class="btn-primary" (click)="generateCrossword()">Generate Puzzle</button>
+      <button class="btn-outline" (click)="exportToExcel()" *ngIf="generated">Export Excel</button>
+    </div>
+
   </div>
-  <button (click)="addAcrossClue()">Add Across Clue</button>
 
-  <h3>Down Clues</h3>
-  <div *ngFor="let downClue of downClues; let i = index">
-    <label>Number:</label> <input type="number" [(ngModel)]="downClues[i].number">
-    <label>Clue:</label> <input type="text" [(ngModel)]="downClues[i].clue">
-    <label>Answer:</label> <input type="text" [(ngModel)]="downClues[i].answer">
+  <!-- ── Puzzle Panel ──────────────────────────────────────────────────────── -->
+  <div class="cw-puzzle-panel" *ngIf="generated">
+
+    <!-- Grid -->
+    <div class="cw-grid-wrap" #crosswordContainer>
+      <table class="cw-grid">
+        <tr *ngFor="let row of grid; let r = index">
+          <td *ngFor="let cell of row; let c = index"
+              class="cw-cell"
+              [class.cw-black]="cell.isBlack"
+              [class.cw-highlighted]="cell.highlighted"
+              [class.cw-active]="cell.active"
+              [class.cw-correct]="isCellCorrect(r, c)"
+              [class.cw-wrong]="isCellWrong(r, c)"
+              (click)="onCellClick(r, c)">
+            <span class="cw-cell-num" *ngIf="cell.number">{{ cell.number }}</span>
+            <input *ngIf="!cell.isBlack"
+                   class="cw-cell-input"
+                   [attr.data-cell]="r + '-' + c"
+                   [value]="cell.userInput"
+                   maxlength="1"
+                   (keydown)="onKeyInput($event, r, c)"
+                   (click)="onCellClick(r, c)">
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- Puzzle controls -->
+    <div class="cw-controls">
+      <button class="btn-primary" (click)="checkAnswers()">Check</button>
+      <button class="btn-outline" (click)="revealAnswers()">Reveal</button>
+      <button class="btn-outline" (click)="resetPuzzle()">Reset</button>
+      <button class="btn-outline" (click)="generatePDF()">PDF</button>
+    </div>
+
+    <!-- Clue lists -->
+    <div class="cw-clue-lists">
+      <div class="cw-clue-list">
+        <div class="cw-clue-list-title">Across</div>
+        <div *ngFor="let pw of acrossPlaced"
+             class="cw-clue-item"
+             [class.cw-clue-selected]="selectedClue === pw"
+             (click)="selectClue(pw)">
+          <span class="cw-clue-num">{{ pw.number }}</span>
+          <span>{{ pw.clue || '(no clue)' }}</span>
+        </div>
+      </div>
+      <div class="cw-clue-list">
+        <div class="cw-clue-list-title">Down</div>
+        <div *ngFor="let pw of downPlaced"
+             class="cw-clue-item"
+             [class.cw-clue-selected]="selectedClue === pw"
+             (click)="selectClue(pw)">
+          <span class="cw-clue-num">{{ pw.number }}</span>
+          <span>{{ pw.clue || '(no clue)' }}</span>
+        </div>
+      </div>
+    </div>
+
   </div>
-  <button (click)="addDownClue()">Add Down Clue</button>
 
-  <button (click)="generateCrossword()">Generate Crossword</button>
-</div>
-
-<div *ngIf="crossword" #crosswordContainer>
-  <table style="border-collapse: collapse; border: 1px solid black;">
-    <tr *ngFor="let row of crossword.grid; let i = index">
-      <td *ngFor="let cell of row; let j = index"
-          [style.width.px]="30"
-          [style.height.px]="30"
-          [style.border]="'1px solid black'"
-          [style.textAlign]="'center'"
-          [style.backgroundColor]="cell === '#' ? 'black' : 'white'">
-          <span *ngIf="getNumber(i, j) !== 0">{{ getNumber(i, j) }}</span>
-          <input *ngIf="cell !== '#'" type="text" maxlength="1" style="width: 25px; border: none; text-transform: uppercase;">
-      </td>
-    </tr>
-  </table>
-
-  <div>
-    <h3>Across</h3>
-    <ol>
-      <li *ngFor="let clue of crossword.across">
-        {{ clue.number }}. {{ clue.clue }}
-      </li>
-    </ol>
-  </div>
-
-  <div>
-    <h3>Down</h3>
-    <ol>
-      <li *ngFor="let clue of crossword.down">
-        {{ clue.number }}. {{ clue.clue }}
-      </li>
-    </ol>
-  </div>
-</div>
-<div *ngIf="crossword">
-  <button (click)="generatePDF()">Generate PDF</button>
-  <button (click)="exportToExcel()">Export to Excel</button>
 </div>

@@ -1,0 +1,198 @@
+:host { display: block; padding: 16px; }
+
+.sdk-page {
+  max-width: 520px;
+  margin: 0 auto;
+  font-family: 'Roboto', sans-serif;
+}
+
+// ── Header ────────────────────────────────────────────────────────────────────
+.sdk-header {
+  margin-bottom: 16px;
+}
+
+.sdk-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sdk-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--snr-primary);
+}
+
+.sdk-difficulty {
+  display: flex;
+  gap: 6px;
+}
+
+.diff-btn {
+  padding: 5px 14px;
+  border-radius: 20px;
+  border: 1.5px solid var(--snr-primary);
+  background: white;
+  color: var(--snr-primary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover { background: var(--snr-primary-light); }
+  &.diff-active { background: var(--snr-primary); color: white; }
+}
+
+.sdk-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+// ── Grid ──────────────────────────────────────────────────────────────────────
+.sdk-grid-wrap {
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  overflow: hidden;
+  display: inline-block;
+  width: 100%;
+}
+
+.sdk-grid {
+  width: 100%;
+  border-collapse: collapse;
+  border: 2.5px solid #333;
+  table-layout: fixed;
+}
+
+.sdk-row { display: table-row; }
+
+.sdk-cell {
+  width: 11.11%;
+  aspect-ratio: 1;
+  border: 1px solid #bbb;
+  text-align: center;
+  vertical-align: middle;
+  cursor: pointer;
+  position: relative;
+  transition: background-color 0.1s ease;
+  background: white;
+  padding: 0;
+
+  // Thick 3×3 box borders
+  &.sdk-border-right  { border-right:  2.5px solid #333; }
+  &.sdk-border-bottom { border-bottom: 2.5px solid #333; }
+
+  // States
+  &.sdk-related   { background: rgba(var(--snr-primary-rgb), 0.06); }
+  &.sdk-same-num  { background: rgba(var(--snr-primary-rgb), 0.18); }
+  &.sdk-selected  { background: rgba(var(--snr-primary-rgb), 0.30) !important; }
+  &.sdk-given     { background: #f0f0f0; cursor: default; }
+  &.sdk-correct   { background: #d4edda !important; }
+  &.sdk-wrong     { background: #f8d7da !important; }
+
+  // Revealed cells — distinct amber background
+  &.sdk-revealed  { background: #fff3cd !important; cursor: default; }
+}
+
+// ── Cell content ──────────────────────────────────────────────────────────────
+.sdk-given-val {
+  font-size: clamp(14px, 3.5vw, 22px);
+  font-weight: 700;
+  color: #1a1a2e;
+  user-select: none;
+}
+
+.sdk-revealed-val {
+  font-size: clamp(14px, 3.5vw, 22px);
+  font-weight: 700;
+  color: #b45309;   // amber — visually distinct from given (dark) and user input (primary)
+  font-style: italic;
+  user-select: none;
+}
+
+.sdk-input {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: transparent;
+  text-align: center;
+  font-size: clamp(14px, 3.5vw, 22px);
+  font-weight: 600;
+  color: var(--snr-primary);
+  cursor: pointer;
+  caret-color: transparent;
+
+  &:focus { outline: none; }
+}
+
+// ── Legend ────────────────────────────────────────────────────────────────────
+.sdk-legend {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  font-size: 12px;
+  color: rgba(0,0,0,0.6);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  display: inline-block;
+  &.dot-given    { background: #f0f0f0; border: 1px solid #bbb; }
+  &.dot-revealed { background: #fff3cd; border: 1px solid #f59e0b; }
+  &.dot-correct  { background: #d4edda; border: 1px solid #28a745; }
+  &.dot-wrong    { background: #f8d7da; border: 1px solid #dc3545; }
+}
+
+// ── Buttons ───────────────────────────────────────────────────────────────────
+.btn-primary {
+  background: var(--snr-primary);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 7px 16px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  &:hover { background: var(--snr-primary-dark); }
+}
+
+.btn-outline {
+  background: white;
+  color: var(--snr-primary);
+  border: 1.5px solid var(--snr-primary);
+  border-radius: 6px;
+  padding: 7px 16px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  &:hover { background: var(--snr-primary-light); }
+}
+
+.btn-reveal {
+  background: #f59e0b;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 7px 16px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  &:hover { background: #d97706; }
+}

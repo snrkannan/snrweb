@@ -1,45 +1,117 @@
-<mat-toolbar color="primary" class="sidenav-header">
-    <span class="brand-title">SNR</span>
-  </mat-toolbar>
-  
-  <mat-nav-list>
-    <a mat-list-item routerLink="/about">About</a>
-  
-    <mat-expansion-panel>
-      <mat-expansion-panel-header>
-        <mat-panel-title>PDF</mat-panel-title>
+<div class="d-flex flex-column h-100 snr-sidenav text-white">
+
+  <!-- Brand -->
+  <div class="d-flex align-items-center gap-2 px-3 py-3 snr-border-bottom">
+    <span class="snr-brand-icon rounded-2 d-flex align-items-center justify-content-center p-1">
+      <mat-icon style="font-size:20px;width:20px;height:20px;">dashboard</mat-icon>
+    </span>
+    <div class="d-flex flex-column lh-1">
+      <span class="fw-bold fs-6">SNR Tools</span>
+      <small class="snr-muted" style="font-size:10px;">Productivity Suite</small>
+    </div>
+  </div>
+
+  <!-- Nav -->
+  <nav class="flex-grow-1 overflow-auto py-2">
+
+    <a routerLink="/about" routerLinkActive="snr-active"
+       class="snr-nav-item d-flex align-items-center gap-2 px-3 py-2 mx-2 rounded-2 text-decoration-none"
+       (click)="closeMenu()">
+      <mat-icon>info</mat-icon>
+      <span class="small fw-medium">About</span>
+    </a>
+
+    <div class="snr-label px-3 pt-3 pb-1">Tools</div>
+
+    <mat-expansion-panel #pdfPanel class="snr-panel" (opened)="onPanelOpened(pdfPanel)">
+      <mat-expansion-panel-header class="snr-panel-header px-3">
+        <mat-icon class="me-2">picture_as_pdf</mat-icon>
+        <mat-panel-title class="small fw-medium">PDF Tools</mat-panel-title>
       </mat-expansion-panel-header>
-      <mat-action-list>
-        <a mat-list-item routerLink="/pdf-splitter">PDF Splitter</a>
-        <a mat-list-item routerLink="/pdf-merger">PDF Merger</a>
-        <a mat-list-item routerLink="/cursive-write">Cursive Generator</a>
-      </mat-action-list>
+      <div class="ps-4">
+        <a routerLink="/pdf-splitter" routerLinkActive="snr-active"
+           class="snr-nav-item d-flex align-items-center gap-2 px-3 py-2 mx-2 rounded-2 text-decoration-none"
+           (click)="closeMenu()">
+          <mat-icon style="font-size:16px;width:16px;height:16px;">cut</mat-icon>
+          <span class="small">PDF Splitter</span>
+        </a>
+        <a routerLink="/pdf-merger" routerLinkActive="snr-active"
+           class="snr-nav-item d-flex align-items-center gap-2 px-3 py-2 mx-2 rounded-2 text-decoration-none"
+           (click)="closeMenu()">
+          <mat-icon style="font-size:16px;width:16px;height:16px;">layers</mat-icon>
+          <span class="small">PDF Merger</span>
+        </a>
+        <a routerLink="/cursive-write" routerLinkActive="snr-active"
+           class="snr-nav-item d-flex align-items-center gap-2 px-3 py-2 mx-2 rounded-2 text-decoration-none"
+           (click)="closeMenu()">
+          <mat-icon style="font-size:16px;width:16px;height:16px;">edit</mat-icon>
+          <span class="small">Cursive Generator</span>
+        </a>
+      </div>
     </mat-expansion-panel>
-    <mat-expansion-panel>
-      <mat-expansion-panel-header>
-        <mat-panel-title>General</mat-panel-title>
+
+    <mat-expansion-panel #utilitiesPanel class="snr-panel" (opened)="onPanelOpened(utilitiesPanel)">
+      <mat-expansion-panel-header class="snr-panel-header px-3">
+        <mat-icon class="me-2">apps</mat-icon>
+        <mat-panel-title class="small fw-medium">Utilities</mat-panel-title>
       </mat-expansion-panel-header>
-      <mat-action-list>
-        <a mat-list-item routerLink="/date-Converter">Date Converter</a>
-             </mat-action-list>
-             <mat-action-list>    <a mat-list-item routerLink="/expense-tracker">Expense Tracker</a>
-            </mat-action-list>
-            <mat-action-list>    <a mat-list-item routerLink="/folder-tree">Folder Tree</a>
-            </mat-action-list>
-             <mat-action-list>    <a mat-list-item routerLink="/file-explorer">File Explorer</a>
-            </mat-action-list>
-           
+      <div class="ps-4">
+        <a routerLink="/date-Converter" routerLinkActive="snr-active"
+           class="snr-nav-item d-flex align-items-center gap-2 px-3 py-2 mx-2 rounded-2 text-decoration-none"
+           (click)="closeMenu()">
+          <mat-icon style="font-size:16px;width:16px;height:16px;">calendar_today</mat-icon>
+          <span class="small">Date Converter</span>
+        </a>
+        
+      </div>
     </mat-expansion-panel>
-    <mat-expansion-panel>
-        <mat-expansion-panel-header>
-          <mat-panel-title>Booklet</mat-panel-title>
-        </mat-expansion-panel-header>
-        <mat-action-list>
-          <a mat-list-item routerLink="/crossword-puzzle">Crossword Puzzle</a>
-        </mat-action-list>
-      </mat-expansion-panel>
-  
-  </mat-nav-list>
-  
-  
-  
+
+    <div class="snr-label px-3 pt-3 pb-1">Entertainment</div>
+
+    <mat-expansion-panel #gamesPanel class="snr-panel" (opened)="onPanelOpened(gamesPanel)">
+      <mat-expansion-panel-header class="snr-panel-header px-3">
+        <mat-icon class="me-2">sports_esports</mat-icon>
+        <mat-panel-title class="small fw-medium">Games & Puzzles</mat-panel-title>
+      </mat-expansion-panel-header>
+      <div class="ps-4">
+        <a routerLink="/crossword-puzzle" routerLinkActive="snr-active"
+           class="snr-nav-item d-flex align-items-center gap-2 px-3 py-2 mx-2 rounded-2 text-decoration-none"
+           (click)="closeMenu()">
+          <mat-icon style="font-size:16px;width:16px;height:16px;">grid_3x3</mat-icon>
+          <span class="small">Crossword Puzzle</span>
+        </a>
+        <a routerLink="/sudoku" routerLinkActive="snr-active"
+           class="snr-nav-item d-flex align-items-center gap-2 px-3 py-2 mx-2 rounded-2 text-decoration-none"
+           (click)="closeMenu()">
+          <mat-icon style="font-size:16px;width:16px;height:16px;">grid_on</mat-icon>
+          <span class="small">Sudoku</span>
+        </a>
+      </div>
+    </mat-expansion-panel>
+
+    <div class="snr-label px-3 pt-3 pb-1">Personal</div>
+
+    <mat-expansion-panel #personalPanel class="snr-panel" (opened)="onPanelOpened(personalPanel)">
+      <mat-expansion-panel-header class="snr-panel-header px-3">
+        <mat-icon class="me-2">people</mat-icon>
+        <mat-panel-title class="small fw-medium">Family</mat-panel-title>
+      </mat-expansion-panel-header>
+      <div class="ps-4">
+        <a routerLink="/family-tree" routerLinkActive="snr-active"
+           class="snr-nav-item d-flex align-items-center gap-2 px-3 py-2 mx-2 rounded-2 text-decoration-none"
+           (click)="closeMenu()">
+          <mat-icon style="font-size:16px;width:16px;height:16px;">account_tree</mat-icon>
+          <span class="small">Family Tree</span>
+        </a>
+      </div>
+    </mat-expansion-panel>
+
+  </nav>
+
+  <!-- Footer strip -->
+  <div class="d-flex align-items-center gap-2 px-3 py-2 snr-border-top snr-muted">
+    <mat-icon style="font-size:14px;width:14px;height:14px;">verified</mat-icon>
+    <small style="font-size:11px;">SNR Tools v1.0</small>
+  </div>
+
+</div>

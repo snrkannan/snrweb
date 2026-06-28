@@ -1,6 +1,34 @@
-<mat-toolbar color="primary">
-    <button mat-icon-button (click)="sidenav.toggle()">
+<nav class="navbar px-3 py-0 snr-navbar">
+  <div class="d-flex align-items-center gap-2">
+    <button class="btn btn-link text-white p-1" (click)="sidenav.toggle()">
       <mat-icon>menu</mat-icon>
     </button>
-      </mat-toolbar>
-  
+    <span class="fw-bold text-white ms-1">SNR Tools</span>
+  </div>
+
+  <div class="d-flex align-items-center gap-1 ms-auto position-relative">
+    <!-- Theme picker (Angular-driven dropdown) -->
+    <div class="position-relative">
+      <button class="btn btn-link text-white p-1" (click)="toggleThemeMenu()" title="Change Theme">
+        <mat-icon>palette</mat-icon>
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end shadow" [class.show]="themeMenuOpen" style="min-width:160px;">
+        <li class="dropdown-header small text-muted px-3 py-1">Choose Theme</li>
+        <li *ngFor="let theme of themes; let i = index">
+          <button class="dropdown-item d-flex align-items-center gap-2 py-2"
+                  [class.active]="currentTheme === i"
+                  (click)="changeTheme(i)">
+            <span class="rounded-circle flex-shrink-0"
+                  [style.background]="theme.primary"
+                  style="width:14px;height:14px;border:2px solid rgba(0,0,0,0.15);display:inline-block;"></span>
+            <span class="small">{{ theme.name }}</span>
+          </button>
+        </li>
+      </ul>
+    </div>
+
+    <button class="btn btn-link text-white p-1">
+      <mat-icon>settings</mat-icon>
+    </button>
+  </div>
+</nav>

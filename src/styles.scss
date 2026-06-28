@@ -1,36 +1,89 @@
-/* You can add global styles to this file, and also import other style files */
 @import "assets/fonts/generated-fonts";
-html, body { height: 100%; }
-body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
-
-html, body { height: 100%; }
-body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
-
-/* src/styles.scss */
-
-// Import Google Fonts for variety
 @import url('https://fonts.googleapis.com/css2?family=Alex+Brush&family=Dancing+Script&family=Great+Vibes&family=Satisfy&display=swap');
 
-// You can still keep your local font if you have one
+* { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: 'Roboto', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+// ── Theme variables (overridden by ThemeService at runtime) ──────────────────
+:root {
+  --snr-primary:       #6f42c1;
+  --snr-primary-light: rgba(111, 66, 193, 0.12);
+  --snr-primary-dark:  #5a32a3;
+  --snr-primary-rgb:   111, 66, 193;
+}
+
+// ── Shared utility classes used across all pages ─────────────────────────────
+.snr-card-header {
+  background-color: var(--snr-primary) !important;
+  color: white !important;
+  padding: 10px 16px !important;
+  border-radius: 8px 8px 0 0;
+  margin: -16px -16px 12px -16px !important;
+
+  mat-card-title, .card-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 !important;
+    font-size: 16px;
+    font-weight: 600;
+    color: white !important;
+
+    mat-icon { font-size: 20px; width: 20px; height: 20px; }
+  }
+}
+
+.snr-btn-primary {
+  background-color: var(--snr-primary) !important;
+  color: white !important;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover {
+    background-color: var(--snr-primary-dark) !important;
+    box-shadow: 0 3px 8px rgba(var(--snr-primary-rgb), 0.35);
+  }
+}
+
+.snr-result-box {
+  margin-top: 16px;
+  padding: 14px 16px;
+  background: var(--snr-primary-light);
+  border: 1px solid rgba(var(--snr-primary-rgb), 0.25);
+  border-radius: 8px;
+}
+
+.snr-text-primary { color: var(--snr-primary) !important; }
+.snr-border-primary { border-color: var(--snr-primary) !important; }
+.snr-bg-primary-light { background-color: var(--snr-primary-light) !important; }
+
+// ── Cursive text (used by cursive-write) ─────────────────────────────────────
+.cursive-text {
+  font-family: var(--selected-font, 'Great Vibes'), cursive;
+  font-size: var(--cursive-size, 24px);
+  line-height: var(--cursive-line-height, 1.8);
+  color: var(--cursive-color, #205634);
+  white-space: pre-wrap;
+  margin: 0;
+  padding: 10px;
+  z-index: 2;
+  position: relative;
+}
+
 @font-face {
   font-family: 'LocalCursive';
   src: url('assets/fonts/LearningCurve.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
 }
-
-.cursive-text {
-  // Use the CSS variable --selected-font set by the component
-  font-family: var(--selected-font, 'Great Vibes'), cursive;
-  font-size: var(--cursive-size, 24px); 
-  line-height: var(--cursive-line-height, 1.8); 
-  color: var(--cursive-color, #205634); 
-  
-  white-space: pre-wrap;
-  margin: 0;
-  padding: 10px; 
-  z-index: 2; 
-  position: relative; 
-}
-
-// ... (keep the .ruled-lines styles from the previous step)

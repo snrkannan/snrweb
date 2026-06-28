@@ -1,0 +1,534 @@
+<div class="ft-page">
+
+  <!-- ── Toolbar ────────────────────────────────────────────────────────────── -->
+  <div class="ft-toolbar">
+    <div class="ft-toolbar-left">
+      <span class="ft-title"><mat-icon>account_tree</mat-icon> Family Tree</span>
+    </div>
+
+    <div class="ft-search">
+      <mat-icon class="ft-search-icon">search</mat-icon>
+      <input class="ft-search-input" [(ngModel)]="searchQuery" (ngModelChange)="onSearch()" placeholder="Search all groups…">
+      <div class="ft-search-results" *ngIf="searchQuery && filteredMembers.length">
+        <div class="ft-search-item" *ngFor="let m of filteredMembers" (click)="highlightMember(m.id)">
+          <span class="ft-dot" [style.background]="groupColor(m.groupId)"></span>
+          {{ m.name }}
+          <small class="text-muted ms-1">{{ getGroup(m.groupId)?.name }}</small>
+        </div>
+      </div>
+    </div>
+
+    <div class="ft-toolbar-right">
+      <button class="btn-primary"  (click)="openAdd()"><mat-icon>person_add</mat-icon> Add Member</button>
+      <button class="btn-outline"  (click)="openConnect()"     [disabled]="!selectedMember"><mat-icon>link</mat-icon> Connect</button>
+      <button class="btn-outline"  (click)="openCrossConnect()" [disabled]="tree.groups.length < 2"><mat-icon>compare_arrows</mat-icon> Cross-Link</button>
+      <button class="btn-outline"  (click)="showPdfOpts=true"><mat-icon>picture_as_pdf</mat-icon> PDF</button>
+      <div class="ft-menu-wrap">
+        <button class="btn-icon" (click)="openGroupMgr()"  title="Manage Groups"><mat-icon>folder</mat-icon></button>
+        <button class="btn-icon" (click)="showImport=true" title="Import JSON"><mat-icon>upload</mat-icon></button>
+        <button class="btn-icon" (click)="exportJson()"    title="Export JSON"><mat-icon>download</mat-icon></button>
+        <button class="btn-icon" (click)="clearAll()"      title="Clear all"><mat-icon>delete_sweep</mat-icon></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Group tabs ─────────────────────────────────────────────────────────── -->
+  <div class="ft-group-tabs">
+    <button *ngFor="let g of tree.groups"
+            class="ft-group-tab"
+            [class.ft-group-tab-active]="tree.activeGroupId === g.id"
+            [style.--tab-color]="g.color"
+            (click)="switchGroup(g.id)">
+      <span class="ft-group-tab-dot" [style.background]="g.color"></span>
+      {{ g.name }}
+      <small class="ft-group-count">({{ membersForGroup(g.id).length }})</small>
+    </button>
+    <button class="ft-group-tab ft-group-tab-add" (click)="openGroupMgr()" title="Add group">
+      <mat-icon>add</mat-icon>
+    </button>
+  </div>
+
+  <!-- ── Zoom bar ───────────────────────────────────────────────────────────── -->
+  <div class="ft-zoom-bar">
+    <button class="btn-icon-sm" (click)="zoom=Math.min(2,zoom+0.1)"><mat-icon>add</mat-icon></button>
+    <span class="ft-zoom-label">{{ (zoom*100)|number:'1.0-0' }}%</span>
+    <button class="btn-icon-sm" (click)="zoom=Math.max(0.3,zoom-0.1)"><mat-icon>remove</mat-icon></button>
+    <button class="btn-icon-sm" (click)="zoom=1; canvasOffset={x:0,y:0}" title="Reset"><mat-icon>center_focus_strong</mat-icon></button>
+    <span class="ft-zoom-divider"></span>
+    <span *ngFor="let g of tree.groups" class="ft-legend-item">
+      <span class="ft-legend-dot" [style.background]="g.color"></span>{{ g.name }}
+    </span>
+  </div>
+
+  <!-- ── Canvas ─────────────────────────────────────────────────────────────── -->
+  <div class="ft-canvas-wrap" (mousemove)="onDragMove($event)" (mouseup)="onDragEnd()" (wheel)="onWheel($event)">
+    <div class="ft-canvas" #treeCanvas
+         [style.width.px]="canvasWidth" [style.height.px]="canvasHeight"
+         [style.transform]="canvasTranslate">
+
+      <!-- SVG links -->
+      <svg class="ft-svg" [attr.width]="canvasWidth" [attr.height]="canvasHeight">
+        <defs>
+          <marker id="arrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L6,3 z" fill="#94a3b8"/>
+          </marker>
+        </defs>
+        <g *ngFor="let link of tree.links">
+          <path [attr.d]="linkPath(link)"
+                [class.ft-link-spouse]="isSpouseLink(link)"
+                [class.ft-link-child]="!isSpouseLink(link)"
+                [class.ft-link-cross]="isCrossGroupLink(link)"
+                fill="none" marker-end="url(#arrow)"/>
+          <text [attr.x]="linkLabelPos(link).x" [attr.y]="linkLabelPos(link).y"
+                class="ft-link-label">{{ link.type }}</text>
+        </g>
+      </svg>
+
+      <!-- Group boundary labels -->
+      <ng-container *ngFor="let g of tree.groups">
+        <ng-container *ngIf="membersForGroup(g.id).length">
+          <div class="ft-group-label"
+               [style.left.px]="membersForGroup(g.id)[0].x"
+               [style.top.px]="groupMinY(g.id) - 32"
+               [style.color]="g.color"
+               [style.borderColor]="g.color">
+            {{ g.name }}
+          </div>
+        </ng-container>
+      </ng-container>
+
+      <!-- Member cards -->
+      <div *ngFor="let m of tree.members"
+           class="ft-card"
+           [class.ft-card-selected]="selectedMember?.id === m.id"
+           [class.ft-card-male]="m.gender==='male'"
+           [class.ft-card-female]="m.gender==='female'"
+           [class.ft-card-other]="m.gender==='other'"
+           [class.ft-card-inactive]="m.groupId !== tree.activeGroupId"
+           [style.left.px]="m.x" [style.top.px]="m.y"
+           [style.--group-color]="groupColor(m.groupId)"
+           (click)="selectMember(m)"
+           (mousedown)="onDragStart($event, m.id)">
+
+        <span class="ft-gen-badge" [style.background]="genBadgeColor(m.generation)">Gen {{ m.generation }}</span>
+
+        <div class="ft-avatar">
+          <img *ngIf="m.photo" [src]="m.photo" alt="photo">
+          <mat-icon *ngIf="!m.photo">{{ m.gender==='female' ? 'face_3' : 'face' }}</mat-icon>
+        </div>
+
+        <div class="ft-card-body">
+          <div class="ft-card-name">{{ m.name }}</div>
+          <div class="ft-card-meta">
+            <span *ngIf="m.age">{{ m.age }} yrs</span>
+            <span class="ft-gender-dot" [style.background]="genderColor(m.gender)"></span>
+          </div>
+          <div class="ft-spouse" *ngIf="m.spouseId && getMember(m.spouseId)">
+            <mat-icon style="font-size:11px;width:11px;height:11px;">favorite</mat-icon>
+            {{ getMember(m.spouseId)?.name }}
+          </div>
+        </div>
+
+        <div class="ft-card-actions" (click)="$event.stopPropagation()">
+          <button class="ft-action-btn" (click)="openEdit(m)"                  title="Edit"><mat-icon>edit</mat-icon></button>
+          <button class="ft-action-btn" (click)="openAddRelative(m,'spouse')"  title="Add Spouse"><mat-icon>favorite</mat-icon></button>
+          <button class="ft-action-btn" (click)="openAddRelative(m,'child')"   title="Add Child"><mat-icon>child_care</mat-icon></button>
+          <button class="ft-action-btn" (click)="openAddRelative(m,'father')"  title="Add Parent"><mat-icon>person</mat-icon></button>
+          <button class="ft-action-btn ft-action-del" (click)="confirmDelete(m)" title="Delete"><mat-icon>delete</mat-icon></button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="ft-empty" *ngIf="!tree.members.length">
+    <mat-icon>account_tree</mat-icon>
+    <p>No members yet. Click <strong>Add Member</strong> to start.</p>
+  </div>
+
+
+  <!-- ══════════════════════ GROUP MANAGER MODAL ══════════════════════════════ -->
+  <div class="ft-overlay" *ngIf="showGroupMgr" (click)="showGroupMgr=false">
+    <div class="ft-modal" (click)="$event.stopPropagation()">
+      <div class="ft-modal-header">
+        <span><mat-icon>folder</mat-icon> Manage Family Groups</span>
+        <button class="ft-modal-close" (click)="showGroupMgr=false"><mat-icon>close</mat-icon></button>
+      </div>
+      <div class="ft-modal-body">
+
+        <!-- Existing groups -->
+        <div class="ft-group-list">
+          <div class="ft-group-row" *ngFor="let g of tree.groups">
+            <span class="ft-group-color-dot" [style.background]="g.color"></span>
+            <ng-container *ngIf="editingGroupId !== g.id">
+              <span class="ft-group-row-name">{{ g.name }}</span>
+              <small class="text-muted">{{ membersForGroup(g.id).length }} members</small>
+              <div class="ft-group-row-actions">
+                <button class="btn-icon-sm" (click)="startRenameGroup(g)" title="Rename"><mat-icon>edit</mat-icon></button>
+                <button class="btn-icon-sm ft-del-btn" (click)="deleteGroup(g)" [disabled]="tree.groups.length<=1" title="Delete"><mat-icon>delete</mat-icon></button>
+              </div>
+            </ng-container>
+            <ng-container *ngIf="editingGroupId === g.id">
+              <input class="ft-input ft-inline-input" [(ngModel)]="groupForm.name" (keydown.enter)="saveRenameGroup()">
+              <button class="btn-primary btn-sm" (click)="saveRenameGroup()">Save</button>
+              <button class="btn-outline btn-sm" (click)="editingGroupId=''">Cancel</button>
+            </ng-container>
+          </div>
+        </div>
+
+        <!-- Create new group -->
+        <div class="ft-rel-divider mt-3"><span>New Group</span></div>
+        <div class="ft-form-row-2">
+          <div>
+            <label>Group Name</label>
+            <input class="ft-input" [(ngModel)]="groupForm.name" placeholder="e.g. Patel Family">
+          </div>
+          <div class="d-flex align-items-end">
+            <button class="btn-primary" (click)="createGroup()"><mat-icon>add</mat-icon> Create</button>
+          </div>
+        </div>
+
+      </div>
+      <div class="ft-modal-footer">
+        <button class="btn-outline" (click)="showGroupMgr=false">Close</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════ CROSS-GROUP CONNECT MODAL ════════════════════════ -->
+  <div class="ft-overlay" *ngIf="showCrossConn" (click)="showCrossConn=false">
+    <div class="ft-modal" (click)="$event.stopPropagation()">
+      <div class="ft-modal-header">
+        <span><mat-icon>compare_arrows</mat-icon> Connect Across Groups</span>
+        <button class="ft-modal-close" (click)="showCrossConn=false"><mat-icon>close</mat-icon></button>
+      </div>
+      <div class="ft-modal-body">
+
+        <div class="ft-cross-conn-hint">
+          <mat-icon>info</mat-icon>
+          Use this to link members from different family groups — e.g. a marriage between two families.
+        </div>
+
+        <div class="ft-form-row-2">
+          <div>
+            <label>From Group</label>
+            <select class="ft-input" [(ngModel)]="crossConnForm.fromGroupId">
+              <option *ngFor="let g of tree.groups" [value]="g.id">{{ g.name }}</option>
+            </select>
+          </div>
+          <div>
+            <label>Member</label>
+            <select class="ft-input" [(ngModel)]="crossConnForm.fromId">
+              <option value="">— Select —</option>
+              <option *ngFor="let m of crossConnFromMembers()" [value]="m.id">{{ m.name }}</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="ft-form-row">
+          <label>Relationship</label>
+          <select class="ft-input" [(ngModel)]="crossConnForm.type">
+            <option *ngFor="let r of relationshipTypes" [value]="r">{{ r | titlecase }}</option>
+          </select>
+        </div>
+
+        <div class="ft-form-row-2">
+          <div>
+            <label>To Group</label>
+            <select class="ft-input" [(ngModel)]="crossConnForm.toGroupId">
+              <option *ngFor="let g of tree.groups" [value]="g.id">{{ g.name }}</option>
+            </select>
+          </div>
+          <div>
+            <label>Member</label>
+            <select class="ft-input" [(ngModel)]="crossConnForm.toId">
+              <option value="">— Select —</option>
+              <option *ngFor="let m of crossConnToMembers()" [value]="m.id"
+                      [disabled]="m.id===crossConnForm.fromId">{{ m.name }}</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="ft-rel-hint" *ngIf="crossConnForm.fromId && crossConnForm.toId">
+          <mat-icon>info</mat-icon>
+          <span>
+            <strong>{{ getMember(crossConnForm.fromId)?.name }}</strong>
+            ({{ getGroup(crossConnForm.fromGroupId)?.name }}) will be connected as
+            <strong>{{ crossConnForm.type }}</strong> to
+            <strong>{{ getMember(crossConnForm.toId)?.name }}</strong>
+            ({{ getGroup(crossConnForm.toGroupId)?.name }})
+          </span>
+        </div>
+
+      </div>
+      <div class="ft-modal-footer">
+        <button class="btn-outline" (click)="showCrossConn=false">Cancel</button>
+        <button class="btn-primary" (click)="saveCrossConnect()"
+                [disabled]="!crossConnForm.fromId || !crossConnForm.toId">
+          <mat-icon>compare_arrows</mat-icon> Connect
+        </button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════ ADD / EDIT MODAL ═════════════════════════════════ -->
+  <div class="ft-overlay" *ngIf="showForm" (click)="showForm=false">
+    <div class="ft-modal" (click)="$event.stopPropagation()">
+      <div class="ft-modal-header">
+        <div class="ft-modal-title">
+          <span *ngIf="editingMember">Edit Member</span>
+          <span *ngIf="!editingMember && !quickAddContext">Add Member</span>
+          <span *ngIf="quickAddContext?.rel==='spouse'"><mat-icon>favorite</mat-icon> Add Spouse to {{ quickAddContext?.member?.name }}</span>
+          <span *ngIf="quickAddContext?.rel==='child'||quickAddContext?.rel==='son'||quickAddContext?.rel==='daughter'"><mat-icon>child_care</mat-icon> Add Child to {{ quickAddContext?.member?.name }}</span>
+          <span *ngIf="quickAddContext?.rel==='father'||quickAddContext?.rel==='mother'"><mat-icon>person</mat-icon> Add Parent of {{ quickAddContext?.member?.name }}</span>
+        </div>
+        <button class="ft-modal-close" (click)="showForm=false;quickAddContext=null"><mat-icon>close</mat-icon></button>
+      </div>
+      <div class="ft-modal-body">
+
+        <div class="ft-form-row">
+          <label>Name *</label>
+          <input class="ft-input" [(ngModel)]="form.name" placeholder="Full name">
+        </div>
+
+        <div class="ft-form-row-2">
+          <div>
+            <label>Age</label>
+            <input class="ft-input" type="number" [(ngModel)]="form.age" min="0" max="150">
+          </div>
+          <div>
+            <label>Gender</label>
+            <select class="ft-input" [(ngModel)]="form.gender">
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="ft-form-row-2">
+          <div>
+            <label>Family Group</label>
+            <select class="ft-input" [(ngModel)]="form.groupId">
+              <option *ngFor="let g of tree.groups" [value]="g.id">{{ g.name }}</option>
+            </select>
+          </div>
+          <div>
+            <label>
+              Generation
+              <button type="button" class="ft-gen-mode-btn"
+                      [class.active]="form.genMode==='auto'"
+                      (click)="form.genMode='auto'; onRelationshipFormChange()">
+                Auto
+              </button>
+              <button type="button" class="ft-gen-mode-btn"
+                      [class.active]="form.genMode==='manual'"
+                      (click)="form.genMode='manual'">
+                Manual
+              </button>
+            </label>
+            <input class="ft-input"
+                   [class.ft-gen-readonly]="form.genMode==='auto'"
+                   type="number"
+                   [(ngModel)]="form.generation"
+                   [readonly]="form.genMode==='auto'">
+          </div>
+        </div>
+
+        <div class="ft-form-row">
+          <label>Photo</label>
+          <input type="file" accept="image/*" (change)="onPhotoChange($event)" class="ft-file-input">
+        </div>
+        <div class="ft-form-row" *ngIf="form.photo">
+          <img [src]="form.photo" class="ft-photo-preview" alt="preview">
+        </div>
+
+        <div class="ft-form-row">
+          <label>Notes</label>
+          <textarea class="ft-input ft-textarea" [(ngModel)]="form.notes" rows="2"></textarea>
+        </div>
+
+        <!-- Connect to relative (Add mode only) -->
+        <ng-container *ngIf="!editingMember && tree.members.length">
+          <div class="ft-rel-divider">
+            <span>Connect to existing member
+              <small class="ft-optional" *ngIf="!quickAddContext">(optional)</small>
+            </span>
+          </div>
+
+          <div class="ft-rel-locked" *ngIf="quickAddContext">
+            <div class="ft-rel-locked-row">
+              <span class="ft-rel-locked-label">Relationship</span>
+              <span class="ft-rel-locked-value">{{ form.relationshipType | titlecase }}</span>
+            </div>
+            <div class="ft-rel-locked-row">
+              <span class="ft-rel-locked-label">Connected to</span>
+              <span class="ft-rel-locked-value">
+                <span class="ft-dot me-1" [style.background]="genderColor(quickAddContext.member.gender)"></span>
+                {{ quickAddContext.member.name }}
+              </span>
+            </div>
+          </div>
+
+          <ng-container *ngIf="!quickAddContext">
+            <div class="ft-form-row-2">
+              <div>
+                <label>This person is the</label>
+                <select class="ft-input" [(ngModel)]="form.relationshipType" (ngModelChange)="onRelationshipFormChange()">
+                  <option *ngFor="let r of relationshipTypes" [value]="r">{{ r | titlecase }}</option>
+                </select>
+              </div>
+              <div>
+                <label>of</label>
+                <select class="ft-input" [(ngModel)]="form.relatedMemberId" (ngModelChange)="onRelationshipFormChange()">
+                  <option value="">— Select member —</option>
+                  <optgroup *ngFor="let g of tree.groups" [label]="g.name">
+                    <option *ngFor="let m of membersForGroup(g.id)" [value]="m.id">
+                      {{ m.name }} (Gen {{ m.generation }})
+                    </option>
+                  </optgroup>
+                </select>
+              </div>
+            </div>
+          </ng-container>
+
+          <div class="ft-rel-hint" *ngIf="form.relatedMemberId && form.relationshipType">
+            <mat-icon>info</mat-icon>
+            <span>"{{ form.name || 'New member' }}" will be added as
+              <strong>{{ form.relationshipType }}</strong> of
+              <strong>{{ getMember(form.relatedMemberId)?.name }}</strong>
+              <ng-container *ngIf="(form.relationshipType==='child'||form.relationshipType==='son'||form.relationshipType==='daughter'||form.relationshipType==='father'||form.relationshipType==='mother') && getMember(form.relatedMemberId)?.spouseId">
+                &amp; <strong>{{ getMember(getMember(form.relatedMemberId)!.spouseId!)?.name }}</strong>
+              </ng-container>
+            </span>
+          </div>
+        </ng-container>
+
+        <!-- Custom fields -->
+        <div class="ft-custom-fields">
+          <div class="ft-section-label">
+            Custom Fields <button class="ft-add-cf" (click)="addCustomField()">+ Add</button>
+          </div>
+          <div class="ft-cf-row" *ngFor="let cf of form.customFields; let i=index">
+            <input class="ft-input" [(ngModel)]="cf.key"   placeholder="Field name">
+            <input class="ft-input" [(ngModel)]="cf.value" placeholder="Value">
+            <button class="ft-rm-cf" (click)="removeCustomField(i)"><mat-icon>remove_circle_outline</mat-icon></button>
+          </div>
+        </div>
+
+      </div>
+      <div class="ft-modal-footer">
+        <button class="btn-outline" (click)="showForm=false">Cancel</button>
+        <button class="btn-primary" (click)="saveForm()" [disabled]="!form.name?.trim()">Save</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════ CONNECT MODAL ════════════════════════════════════ -->
+  <div class="ft-overlay" *ngIf="showConnect" (click)="showConnect=false">
+    <div class="ft-modal ft-modal-sm" (click)="$event.stopPropagation()">
+      <div class="ft-modal-header">
+        <span>Connect Members</span>
+        <button class="ft-modal-close" (click)="showConnect=false"><mat-icon>close</mat-icon></button>
+      </div>
+      <div class="ft-modal-body">
+        <div class="ft-form-row">
+          <label>From</label>
+          <select class="ft-input" [(ngModel)]="connectForm.fromId">
+            <option *ngFor="let m of tree.members" [value]="m.id">{{ m.name }} ({{ getGroup(m.groupId)?.name }})</option>
+          </select>
+        </div>
+        <div class="ft-form-row">
+          <label>Relationship</label>
+          <select class="ft-input" [(ngModel)]="connectForm.type">
+            <option *ngFor="let r of relationshipTypes" [value]="r">{{ r | titlecase }}</option>
+          </select>
+        </div>
+        <div class="ft-form-row">
+          <label>To</label>
+          <select class="ft-input" [(ngModel)]="connectForm.toId">
+            <option *ngFor="let m of tree.members" [value]="m.id" [disabled]="m.id===connectForm.fromId">
+              {{ m.name }} ({{ getGroup(m.groupId)?.name }})
+            </option>
+          </select>
+        </div>
+      </div>
+      <div class="ft-modal-footer">
+        <button class="btn-outline" (click)="showConnect=false">Cancel</button>
+        <button class="btn-primary" (click)="saveConnect()">Connect</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════ PDF OPTIONS MODAL ════════════════════════════════ -->
+  <div class="ft-overlay" *ngIf="showPdfOpts" (click)="showPdfOpts=false">
+    <div class="ft-modal" (click)="$event.stopPropagation()">
+      <div class="ft-modal-header">
+        <span>PDF Export Options</span>
+        <button class="ft-modal-close" (click)="showPdfOpts=false"><mat-icon>close</mat-icon></button>
+      </div>
+      <div class="ft-modal-body">
+        <div class="ft-pdf-section">Export Type</div>
+        <label class="ft-check"><input type="checkbox" [(ngModel)]="pdfOpts.layoutExport"> Visual tree snapshot</label>
+        <label class="ft-check"><input type="checkbox" [(ngModel)]="pdfOpts.reportExport"> Detailed member report</label>
+
+        <div class="ft-pdf-section">Group Scope</div>
+        <div class="ft-form-row">
+          <select class="ft-input" [(ngModel)]="pdfOpts.exportGroupId">
+            <option value="all">All Groups</option>
+            <option *ngFor="let g of tree.groups" [value]="g.id">{{ g.name }} only</option>
+          </select>
+        </div>
+
+        <div class="ft-pdf-section">Member Scope</div>
+        <div class="ft-form-row">
+          <select class="ft-input" [(ngModel)]="pdfOpts.exportMode">
+            <option value="full">Full tree</option>
+            <option value="ancestors">Ancestors only</option>
+            <option value="descendants">Descendants only</option>
+          </select>
+        </div>
+
+        <div class="ft-pdf-section">Include in report</div>
+        <div class="ft-check-grid">
+          <label class="ft-check"><input type="checkbox" [(ngModel)]="pdfOpts.includePhoto"> Photo</label>
+          <label class="ft-check"><input type="checkbox" [(ngModel)]="pdfOpts.includeAge"> Age</label>
+          <label class="ft-check"><input type="checkbox" [(ngModel)]="pdfOpts.includeGender"> Gender</label>
+          <label class="ft-check"><input type="checkbox" [(ngModel)]="pdfOpts.includeRelationship"> Relationship</label>
+          <label class="ft-check"><input type="checkbox" [(ngModel)]="pdfOpts.includeSpouse"> Spouse</label>
+          <label class="ft-check"><input type="checkbox" [(ngModel)]="pdfOpts.includeParents"> Parents</label>
+          <label class="ft-check"><input type="checkbox" [(ngModel)]="pdfOpts.includeChildren"> Children</label>
+          <label class="ft-check"><input type="checkbox" [(ngModel)]="pdfOpts.includeNotes"> Notes</label>
+          <label class="ft-check"><input type="checkbox" [(ngModel)]="pdfOpts.includeCustomFields"> Custom fields</label>
+        </div>
+      </div>
+      <div class="ft-modal-footer">
+        <button class="btn-outline" (click)="showPdfOpts=false">Cancel</button>
+        <button class="btn-primary" (click)="exportPdf()"><mat-icon>picture_as_pdf</mat-icon> Export PDF</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════ IMPORT JSON MODAL ════════════════════════════════ -->
+  <div class="ft-overlay" *ngIf="showImport" (click)="showImport=false">
+    <div class="ft-modal" (click)="$event.stopPropagation()">
+      <div class="ft-modal-header">
+        <span>Import JSON</span>
+        <button class="ft-modal-close" (click)="showImport=false"><mat-icon>close</mat-icon></button>
+      </div>
+      <div class="ft-modal-body">
+        <textarea class="ft-input ft-textarea" [(ngModel)]="importJson" rows="10" placeholder="Paste family tree JSON here…"></textarea>
+      </div>
+      <div class="ft-modal-footer">
+        <button class="btn-outline" (click)="showImport=false">Cancel</button>
+        <button class="btn-primary" (click)="doImport()">Import</button>
+      </div>
+    </div>
+  </div>
+
+</div>

@@ -1,8 +1,64 @@
 mat-sidenav-container {
-    height: 100vh;
+  position: fixed;
+  top: 48px;
+  left: 0;
+  right: 0;
+  bottom: 40px;
+  width: 100vw;
+  height: auto;
+  background-color: #f8f9fa;
+  display: flex !important;
+  flex-direction: row !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+mat-sidenav {
+  width: 280px !important;
+  flex-shrink: 0 !important;
+  height: 100% !important;
+  overflow-y: auto !important;
+  border-right: none !important;
+}
+
+.content {
+  padding: 16px !important;
+  background: linear-gradient(to bottom, #f5f7fa 0%, #ffffff 50%);
+  overflow-y: auto;
+  flex: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+
+  @media (max-width: 768px) {
+    padding: 12px !important;
   }
-  
-  .content {
-    min-height: calc(100vh - 56px);
-  }
+}
+
+mat-sidenav-content {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 !important;
+  width: 100% !important;
+  height: 100% !important;
+  overflow: hidden !important;
+}
+
+app-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  width: 100%;
+}
+
+app-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  width: 100%;
+}
   

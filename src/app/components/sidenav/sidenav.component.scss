@@ -1,0 +1,81 @@
+:host {
+  display: block;
+  height: 100%;
+}
+
+.snr-sidenav {
+  background-color: var(--snr-primary);
+  transition: background-color 0.3s ease;
+}
+
+.snr-brand-icon {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.snr-border-bottom { border-bottom: 1px solid rgba(255,255,255,0.15); }
+.snr-border-top    { border-top:    1px solid rgba(255,255,255,0.15); }
+
+.snr-muted  { color: rgba(255,255,255,0.55) !important; }
+
+.snr-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.4);
+}
+
+// Nav items
+.snr-nav-item {
+  color: rgba(255,255,255,0.8) !important;
+  transition: background 0.15s ease;
+
+  mat-icon { color: rgba(255,255,255,0.6); }
+
+  &:hover {
+    background: rgba(255,255,255,0.12) !important;
+    color: #fff !important;
+    mat-icon { color: #fff; }
+  }
+
+  &.snr-active {
+    background: rgba(255,255,255,0.2) !important;
+    color: #fff !important;
+    font-weight: 600;
+    box-shadow: inset 3px 0 0 #fff;
+    mat-icon { color: #fff; }
+  }
+}
+
+// Expansion panels — strip Material chrome
+.snr-panel {
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+
+  ::ng-deep .mat-expansion-panel-body {
+    padding: 0 !important;
+    background: transparent !important;
+  }
+}
+
+.snr-panel-header {
+  height: 40px !important;
+  min-height: 40px !important;
+  background: transparent !important;
+  color: rgba(255,255,255,0.8) !important;
+
+  mat-icon { color: rgba(255,255,255,0.6) !important; }
+
+  ::ng-deep mat-panel-title { color: rgba(255,255,255,0.8) !important; }
+
+  ::ng-deep .mat-expansion-indicator::after {
+    color: rgba(255,255,255,0.5) !important;
+  }
+
+  &:hover {
+    background: rgba(255,255,255,0.12) !important;
+    color: #fff !important;
+  }
+}

@@ -1,0 +1,22 @@
+.container {
+  max-width: 600px;
+  margin: 20px auto;
+  padding: 1.5rem;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+
+  h2 { color: var(--snr-primary); margin-top: 0; }
+}
+
+.btn-primary, .btn.btn-primary {
+  background-color: var(--snr-primary) !important;
+  border-color: var(--snr-primary) !important;
+  color: white !important;
+  &:hover { background-color: var(--snr-primary-dark) !important; border-color: var(--snr-primary-dark) !important; }
+}
+
+.form-control:focus {
+  border-color: var(--snr-primary);
+  box-shadow: 0 0 0 0.2rem var(--snr-primary-light);
+}

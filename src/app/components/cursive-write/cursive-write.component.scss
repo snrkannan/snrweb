@@ -22,7 +22,7 @@
       border: 1px solid #cbd5e1; z-index: 100; box-shadow: 0 10px 15px rgba(0,0,0,0.1);
       .options-wrapper { overflow-y: auto; max-height: 250px; }
       .font-option { padding: 10px; cursor: pointer; font-size: 1.3rem; &:hover { background: #f1f5f9; } }
-      .btn-load-sys { width: 100%; padding: 8px; background: #4f46e5; color: white; border: none; cursor: pointer; font-size: 0.7rem; }
+      .btn-load-sys { width: 100%; padding: 8px; background: var(--snr-primary); color: white; border: none; cursor: pointer; font-size: 0.7rem; }
     }
   }
 
@@ -31,7 +31,7 @@
   }
 
   textarea { width: 100%; height: 120px; border: 1px solid #cbd5e1; border-radius: 6px; margin: 15px 0; padding: 10px; }
-  .btn-primary { width: 100%; padding: 12px; background: #4f46e5; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
+  .btn-primary { width: 100%; padding: 12px; background: var(--snr-primary); color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: background-color 0.2s ease; &:hover { background: var(--snr-primary-dark); } }
 }
 
 .preview-panel { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 40px; }

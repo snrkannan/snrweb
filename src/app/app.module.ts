@@ -10,6 +10,11 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatListModule } from '@angular/material/list';
 import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatSelectModule } from '@angular/material/select';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatMenuModule } from '@angular/material/menu';
 
 // Components
 import { HeaderComponent } from './components/header/header.component';
@@ -23,14 +28,13 @@ import { PdfMergerComponent } from './pages/pdf-merger/pdf-merger.component';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { CrosswordPuzzleComponent } from './pages/crossword-puzzle/crossword-puzzle.component';
 import { DateConverterComponent } from './pages/date-converter/date-converter.component';
-import { ExpenseTrackerComponent } from './pages/expense-tracker/expense-tracker.component';
-import { FolderTreeComponent } from './pages/folder-tree/folder-tree.component';
 import { CdkTreeModule } from '@angular/cdk/tree';
 import { MatTreeModule } from '@angular/material/tree';
 import { FileSizePipe } from './file-size.pipe';
-import { FileExplorerComponent } from './pages/file-explorer/file-explorer.component';
 import { ColorActionComponent } from './components/color-action/color-action.component';
 import { CursiveWriteComponent } from './components/cursive-write/cursive-write.component';
+import { SudokuComponent } from './components/sudoku/sudoku.component';
+import { FamilyTreeComponent } from './pages/family-tree/family-tree.component';
 import { provideHttpClient } from '@angular/common/http';
 
 @NgModule({
@@ -45,12 +49,11 @@ import { provideHttpClient } from '@angular/common/http';
     PdfMergerComponent,
     CrosswordPuzzleComponent,
     DateConverterComponent,
-    ExpenseTrackerComponent,
-    FolderTreeComponent,
-    FileSizePipe,
-    FileExplorerComponent,
-    ColorActionComponent,
-    CursiveWriteComponent
+       FileSizePipe,
+     ColorActionComponent,
+    CursiveWriteComponent,
+    SudokuComponent,
+    FamilyTreeComponent
   ],
   imports: [
     BrowserModule,
@@ -62,15 +65,15 @@ import { provideHttpClient } from '@angular/common/http';
     MatSidenavModule,
     MatListModule,
     MatButtonModule,
-    MatIconModule,
     MatExpansionModule,
+    MatCardModule,
+    MatTooltipModule,
+    MatSelectModule,
+    MatFormFieldModule,
+    MatMenuModule,
     CdkTreeModule,
-     MatTreeModule,
-     MatTreeModule,
-    MatIconModule,
-    MatButtonModule,
-    MatToolbarModule,
-       ],
+    MatTreeModule
+  ],
   providers: [provideHttpClient(),],
   bootstrap: [AppComponent]
 })

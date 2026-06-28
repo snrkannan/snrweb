@@ -1,1 +1,22 @@
-<p>color-action works!</p>
+<div class="p-4">
+  <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
+    <div class="card-header text-white py-3" style="background-color: var(--snr-primary);">
+      <h4 class="mb-0 fw-bold">Welcome to SNR Tools</h4>
+      <small class="opacity-75">Your all-in-one productivity suite</small>
+    </div>
+    <div class="card-body">
+      <div class="row g-3 mt-1">
+        <div class="col-md-4" *ngFor="let tool of tools">
+          <a [routerLink]="tool.route"
+             class="d-flex align-items-start gap-3 p-3 rounded-3 h-100 text-decoration-none tool-card">
+            <mat-icon class="tool-icon flex-shrink-0">{{ tool.icon }}</mat-icon>
+            <div>
+              <div class="fw-semibold tool-name">{{ tool.name }}</div>
+              <small class="text-muted">{{ tool.desc }}</small>
+            </div>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

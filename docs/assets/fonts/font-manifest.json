@@ -1,0 +1,49 @@
+{
+  "assetFonts": [
+    {
+      "name": "AnekTamil VariableFont",
+      "file": "AnekTamil-VariableFont.ttf",
+      "family": "AnekTamilVariableFont"
+    },
+    {
+      "name": "Cursive standard Bold",
+      "file": "Cursive standard Bold.ttf",
+      "family": "Cursive standard Bold"
+    },
+    {
+      "name": "Cursive standard",
+      "file": "Cursive standard.ttf",
+      "family": "Cursive standard"
+    },
+    {
+      "name": "CursiveFont",
+      "file": "CursiveFont.ttf",
+      "family": "CursiveFont"
+    },
+    {
+      "name": "Dnealiancursive",
+      "file": "dnealiancursive.ttf",
+      "family": "dnealiancursive"
+    },
+    {
+      "name": "Kovai",
+      "file": "kovai.ttf",
+      "family": "kovai"
+    },
+    {
+      "name": "LearningCurve",
+      "file": "LearningCurve.ttf",
+      "family": "LearningCurve"
+    },
+    {
+      "name": "LearningCurveDashed",
+      "file": "LearningCurveDashed.ttf",
+      "family": "LearningCurveDashed"
+    },
+    {
+      "name": "VANAVIL Avvaiyar Regular",
+      "file": "VANAVIL-Avvaiyar Regular.otf",
+      "family": "VANAVILAvvaiyar Regular"
+    }
+  ]
+}

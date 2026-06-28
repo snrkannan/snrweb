@@ -1,0 +1,64 @@
+<div class="sdk-page">
+
+  <!-- Header -->
+  <div class="sdk-header">
+    <div class="sdk-title-row">
+      <span class="sdk-title">Sudoku</span>
+      <div class="sdk-difficulty">
+        <button class="diff-btn" [class.diff-active]="difficulty==='easy'"   (click)="difficulty='easy';   newPuzzle()">Easy</button>
+        <button class="diff-btn" [class.diff-active]="difficulty==='medium'" (click)="difficulty='medium'; newPuzzle()">Medium</button>
+        <button class="diff-btn" [class.diff-active]="difficulty==='hard'"   (click)="difficulty='hard';   newPuzzle()">Hard</button>
+      </div>
+    </div>
+    <div class="sdk-actions">
+      <button class="btn-primary"  (click)="newPuzzle()">New Puzzle</button>
+      <button class="btn-outline"  (click)="checkAnswers()">Check</button>
+      <button class="btn-reveal"   (click)="revealAnswers()">Reveal</button>
+      <button class="btn-outline"  (click)="resetPuzzle()">Reset</button>
+      <button class="btn-outline"  (click)="downloadPDF()">PDF</button>
+    </div>
+  </div>
+
+  <!-- Grid -->
+  <div class="sdk-grid-wrap">
+    <table class="sdk-grid">
+      <tbody>
+        <tr *ngFor="let row of grid; let r = index" class="sdk-row">
+          <td *ngFor="let cell of row; let c = index"
+              class="sdk-cell"
+              [class.sdk-given]="cell.isGiven"
+              [class.sdk-revealed]="cell.isRevealed"
+              [class.sdk-correct]="cell.isCorrect"
+              [class.sdk-wrong]="cell.isWrong"
+              [class.sdk-selected]="isSelected(r, c)"
+              [class.sdk-related]="!isSelected(r,c) && isRelated(r, c)"
+              [class.sdk-same-num]="isSameNumber(r, c)"
+              [class.sdk-border-right]="c === 2 || c === 5"
+              [class.sdk-border-bottom]="r === 2 || r === 5"
+              (click)="selectCell(r, c)">
+            <input *ngIf="!cell.isGiven && !cell.isRevealed"
+                   class="sdk-input"
+                   [attr.data-cell]="r + '-' + c"
+                   [value]="cell.value ?? ''"
+                   maxlength="1"
+                   (keydown)="onKeyDown($event, r, c)"
+                   (input)="onInput(r, c, $event)"
+                   (focus)="selectCell(r, c)"
+                   readonly>
+            <span *ngIf="cell.isGiven" class="sdk-given-val">{{ cell.value }}</span>
+            <span *ngIf="cell.isRevealed" class="sdk-revealed-val">{{ cell.value }}</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Legend -->
+  <div class="sdk-legend">
+    <span class="legend-item"><span class="legend-dot dot-given"></span> Given</span>
+    <span class="legend-item"><span class="legend-dot dot-revealed"></span> Revealed</span>
+    <span class="legend-item"><span class="legend-dot dot-correct"></span> Correct</span>
+    <span class="legend-item"><span class="legend-dot dot-wrong"></span> Wrong</span>
+  </div>
+
+</div>

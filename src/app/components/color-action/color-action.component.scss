@@ -1,0 +1,23 @@
+.tool-card {
+  background-color: var(--snr-primary-light);
+  border: 1px solid rgba(var(--snr-primary-rgb), 0.2);
+  transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  cursor: pointer;
+
+  &:hover {
+    background-color: rgba(var(--snr-primary-rgb), 0.2);
+    box-shadow: 0 4px 12px rgba(var(--snr-primary-rgb), 0.2);
+    transform: translateY(-2px);
+  }
+}
+
+.tool-icon {
+  color: var(--snr-primary);
+  font-size: 28px;
+  width: 28px;
+  height: 28px;
+}
+
+.tool-name {
+  color: var(--snr-primary);
+}

@@ -1,14 +1,224 @@
-<div class="converter">
-    <h2>Date to Milliseconds</h2>
-    <input type="datetime-local" [(ngModel)]="dateInput">
-    <button (click)="convertDateToMillis()">Convert to Milliseconds</button>
-    <p *ngIf="milliseconds !== null">Milliseconds: {{ milliseconds }}</p>
-  
-    <hr>
-  
-    <h2>Milliseconds to Date</h2>
-    <input type="text" [(ngModel)]="millisInput" placeholder="Enter milliseconds">
-    <button (click)="convertMillisToDate()">Convert to Date</button>
-    <p *ngIf="convertedDate">Converted Date: {{ convertedDate }}</p>
+<div class="converter-container">
+  <!-- Option Buttons -->
+  <div class="options-header">
+    <button class="opt-btn" [class.opt-btn--active]="selectedOption === 'dateToMillis'" (click)="selectOption('dateToMillis')">
+      <mat-icon>access_time</mat-icon> Date to Milliseconds
+    </button>
+    <button class="opt-btn" [class.opt-btn--active]="selectedOption === 'millisToDate'" (click)="selectOption('millisToDate')">
+      <mat-icon>restore</mat-icon> Milliseconds to Date
+    </button>
+    <button class="opt-btn" [class.opt-btn--active]="selectedOption === 'timeDiff'" (click)="selectOption('timeDiff')">
+      <mat-icon>schedule</mat-icon> Time Difference
+    </button>
+    <button class="opt-btn" [class.opt-btn--active]="selectedOption === 'timezone'" (click)="selectOption('timezone')">
+      <mat-icon>public</mat-icon> Timezone Conversion
+    </button>
+    <button class="opt-btn" [class.opt-btn--active]="selectedOption === 'yearlyCalendar'" (click)="selectOption('yearlyCalendar')">
+      <mat-icon>calendar_month</mat-icon> Yearly Calendar
+    </button>
+  </div>
+
+  <!-- Date to Milliseconds Section -->
+  <mat-card class="converter-card" *ngIf="selectedOption === 'dateToMillis'">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>access_time</mat-icon>
+        Date to Milliseconds
+      </mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="form-group">
+        <label>Select Date & Time:</label>
+        <input type="datetime-local" [(ngModel)]="dateInput" class="input-field">
+        <button class="snr-btn-primary" (click)="convertDateToMillis()">
+          <mat-icon>sync</mat-icon> Convert to Milliseconds
+        </button>
+      </div>
+      <div class="result" *ngIf="milliseconds !== null">
+        <p class="result-label">Milliseconds:</p>
+        <p class="result-value">{{ milliseconds }}</p>
+        <button mat-icon-button (click)="copyToClipboard(milliseconds.toString())" matTooltip="Copy to clipboard">
+          <mat-icon>content_copy</mat-icon>
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Milliseconds to Date Section -->
+  <mat-card class="converter-card" *ngIf="selectedOption === 'millisToDate'">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>restore</mat-icon>
+        Milliseconds to Date
+      </mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="form-group">
+        <label>Enter Milliseconds:</label>
+        <input type="text" [(ngModel)]="millisInput" placeholder="e.g., 1609459200000" class="input-field">
+        <button class="snr-btn-primary" (click)="convertMillisToDate()">
+          <mat-icon>sync</mat-icon> Convert to Date
+        </button>
+      </div>
+      <div class="result" *ngIf="convertedDate">
+        <p class="result-label">Converted Date:</p>
+        <p class="result-value">{{ convertedDate }}</p>
+        <button mat-icon-button (click)="copyToClipboard(convertedDate)" matTooltip="Copy to clipboard">
+          <mat-icon>content_copy</mat-icon>
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Time Difference Section -->
+  <mat-card class="converter-card" *ngIf="selectedOption === 'timeDiff'">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>schedule</mat-icon>
+        Calculate Time Difference
+      </mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="form-group">
+        <label>Start Date & Time:</label>
+        <input type="datetime-local" [(ngModel)]="startDate" class="input-field">
+      </div>
+      <div class="form-group">
+        <label>End Date & Time:</label>
+        <input type="datetime-local" [(ngModel)]="endDate" class="input-field">
+      </div>
+      <button class="snr-btn-primary" (click)="calculateTimeDifference()">
+        <mat-icon>calculate</mat-icon> Calculate Difference
+      </button>
+
+      <div class="result" *ngIf="timeDifference">
+        <p class="result-label">Time Difference:</p>
+        <div class="diff-grid">
+          <div class="diff-item">
+            <span class="diff-value">{{ timeDifference.days }}</span>
+            <span class="diff-label">Days</span>
+          </div>
+          <div class="diff-item">
+            <span class="diff-value">{{ timeDifference.hours }}</span>
+            <span class="diff-label">Hours</span>
+          </div>
+          <div class="diff-item">
+            <span class="diff-value">{{ timeDifference.minutes }}</span>
+            <span class="diff-label">Minutes</span>
+          </div>
+          <div class="diff-item">
+            <span class="diff-value">{{ timeDifference.seconds }}</span>
+            <span class="diff-label">Seconds</span>
+          </div>
+        </div>
+        <div class="total-time">
+          <p><strong>Total Seconds:</strong> {{ timeDifference.totalSeconds }}</p>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Timezone Conversion Section -->
+  <mat-card class="converter-card" *ngIf="selectedOption === 'timezone'">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>public</mat-icon>
+        Timezone Conversion
+      </mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="form-group">
+        <label>Select Date & Time:</label>
+        <input type="datetime-local" [(ngModel)]="dateToConvert" (ngModelChange)="convertToTimezone()" class="input-field">
+      </div>
+
+      <div class="form-group">
+        <label>Select Timezones (Multiselect):</label>
+        <mat-form-field appearance="outline" class="timezone-multiselect">
+          <mat-label>Choose Timezones</mat-label>
+          <mat-select [(ngModel)]="selectedTimezones" (ngModelChange)="convertToTimezone()" multiple>
+            <mat-select-trigger>
+              {{ selectedTimezones.length }} timezone(s) selected
+            </mat-select-trigger>
+            <mat-option *ngFor="let tz of timezones" [value]="tz.value" class="tz-option">
+              {{ tz.label }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+
+      <div class="result" *ngIf="convertedTimezones | keyvalue as items">
+        <p class="result-label" *ngIf="items.length > 0">Timezone Conversions:</p>
+        <div class="timezone-grid">
+          <div class="timezone-item" *ngFor="let item of items">
+            <div class="tz-name">{{ item.key }}</div>
+            <div class="tz-time">{{ item.value }}</div>
+            <button mat-icon-button (click)="copyToClipboard(item.value)" matTooltip="Copy" size="small">
+              <mat-icon>content_copy</mat-icon>
+            </button>
+          </div>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Yearly Calendar Section -->
+  <div class="calendar-container" *ngIf="selectedOption === 'yearlyCalendar'">
+    <div class="calendar-header">
+      <h2>Yearly Calendar</h2>
+      <div class="header-controls">
+        <mat-form-field appearance="outline" class="year-selector">
+          <mat-label>Select Year</mat-label>
+          <mat-select [(ngModel)]="selectedYear" (ngModelChange)="onYearChange()">
+            <mat-option *ngFor="let year of yearRange" [value]="year">
+              {{ year }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="country-selector">
+          <mat-label>Holiday Country</mat-label>
+          <mat-select [(ngModel)]="selectedCountry" (ngModelChange)="onCountryChange()">
+            <mat-option *ngFor="let country of countries" [value]="country.value">
+              {{ country.label }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+    </div>
+
+    <div class="calendar-grid">
+      <mat-card class="month-card" *ngFor="let monthData of yearlyCalendarData">
+        <mat-card-header>
+          <mat-card-title>{{ monthData.month }} {{ selectedYear }}</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="calendar-table">
+            <div class="weekdays">
+              <div class="weekday">Sun</div>
+              <div class="weekday">Mon</div>
+              <div class="weekday">Tue</div>
+              <div class="weekday">Wed</div>
+              <div class="weekday">Thu</div>
+              <div class="weekday">Fri</div>
+              <div class="weekday">Sat</div>
+            </div>
+            <div class="weeks">
+              <div class="week" *ngFor="let week of monthData.days">
+                <div class="day-cell" 
+                     *ngFor="let day of week"
+                     [class.empty]="!day"
+                     [class.today]="day && day.isToday"
+                     [class.weekend]="day?.isWeekend"
+                     [class.holiday]="day?.holiday"
+                     [matTooltip]="day ? getDateTooltip(day) : ''"
+                     matTooltipPosition="above">
+                  {{ day?.day }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
   </div>
   
