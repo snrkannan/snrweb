@@ -23,12 +23,71 @@
       <button class="btn-outline"  (click)="openConnect()"     [disabled]="!selectedMember"><mat-icon>link</mat-icon> Connect</button>
       <button class="btn-outline"  (click)="openCrossConnect()" [disabled]="tree.groups.length < 2"><mat-icon>compare_arrows</mat-icon> Cross-Link</button>
       <button class="btn-outline"  (click)="showPdfOpts=true"><mat-icon>picture_as_pdf</mat-icon> PDF</button>
+      <button class="btn-outline"  (click)="onResetAllGenerations()" title="Recalculate all generations from parent-child mapping"><mat-icon>restart_alt</mat-icon> Reset Gen</button>
+      <button class="btn-outline" [class.btn-multi-active]="showLayoutPanel"
+              (click)="showLayoutPanel=!showLayoutPanel" title="Align tree layout">
+        <mat-icon>dashboard</mat-icon> Align
+      </button>
+      <button class="btn-outline" [class.btn-multi-active]="multiSelectMode"
+              (click)="toggleMultiSelectMode()" title="Toggle multi-select">
+        <mat-icon>{{ multiSelectMode ? 'check_box' : 'check_box_outline_blank' }}</mat-icon>
+        {{ multiSelectMode ? 'Selecting' : 'Select' }}
+      </button>
       <div class="ft-menu-wrap">
         <button class="btn-icon" (click)="openGroupMgr()"  title="Manage Groups"><mat-icon>folder</mat-icon></button>
-        <button class="btn-icon" (click)="showImport=true" title="Import JSON"><mat-icon>upload</mat-icon></button>
-        <button class="btn-icon" (click)="exportJson()"    title="Export JSON"><mat-icon>download</mat-icon></button>
+        <button class="btn-icon" (click)="showImport=true" title="Import JSON"><mat-icon>download</mat-icon></button>
+        <button class="btn-icon" (click)="exportJson()"    title="Export JSON"><mat-icon>upload</mat-icon></button>
         <button class="btn-icon" (click)="clearAll()"      title="Clear all"><mat-icon>delete_sweep</mat-icon></button>
       </div>
+    </div>
+  </div>
+
+  <!-- ── Layout align panel ─────────────────────────────────────────────────── -->
+  <div class="ft-layout-panel" *ngIf="showLayoutPanel">
+    <div class="ft-layout-panel-inner">
+
+      <div class="ft-lp-group">
+        <span class="ft-lp-label"><mat-icon>swap_vert</mat-icon> Direction</span>
+        <div class="ft-lp-options">
+          <button class="ft-lp-btn" [class.active]="layoutOpts.direction==='vertical'"
+                  (click)="layoutOpts.direction='vertical'">
+            <mat-icon>view_stream</mat-icon> Top-Down
+          </button>
+          <button class="ft-lp-btn" [class.active]="layoutOpts.direction==='horizontal'"
+                  (click)="layoutOpts.direction='horizontal'">
+            <mat-icon>view_column</mat-icon> Left-Right
+          </button>
+        </div>
+      </div>
+
+      <div class="ft-lp-group">
+        <span class="ft-lp-label"><mat-icon>space_bar</mat-icon> Spacing</span>
+        <div class="ft-lp-options">
+          <button class="ft-lp-btn" [class.active]="layoutOpts.spacing==='compact'"
+                  (click)="layoutOpts.spacing='compact'"><mat-icon>compress</mat-icon> Compact</button>
+          <button class="ft-lp-btn" [class.active]="layoutOpts.spacing==='normal'"
+                  (click)="layoutOpts.spacing='normal'"><mat-icon>density_medium</mat-icon> Normal</button>
+          <button class="ft-lp-btn" [class.active]="layoutOpts.spacing==='spacious'"
+                  (click)="layoutOpts.spacing='spacious'"><mat-icon>expand</mat-icon> Spacious</button>
+        </div>
+      </div>
+
+      <div class="ft-lp-group">
+        <span class="ft-lp-label"><mat-icon>align_horizontal_center</mat-icon> Align</span>
+        <div class="ft-lp-options">
+          <button class="ft-lp-btn" [class.active]="layoutOpts.align==='left'"
+                  (click)="layoutOpts.align='left'"><mat-icon>align_horizontal_left</mat-icon> Left</button>
+          <button class="ft-lp-btn" [class.active]="layoutOpts.align==='center'"
+                  (click)="layoutOpts.align='center'"><mat-icon>align_horizontal_center</mat-icon> Center</button>
+        </div>
+      </div>
+
+      <button class="btn-primary ft-lp-apply" (click)="applyAlign()">
+        <mat-icon>auto_fix_high</mat-icon> Apply Layout
+      </button>
+      <button class="btn-outline ft-lp-close" (click)="showLayoutPanel=false">
+        <mat-icon>close</mat-icon>
+      </button>
     </div>
   </div>
 
@@ -101,6 +160,7 @@
       <div *ngFor="let m of tree.members"
            class="ft-card"
            [class.ft-card-selected]="selectedMember?.id === m.id"
+           [class.ft-card-multi-selected]="selectedMembers.has(m.id)"
            [class.ft-card-male]="m.gender==='male'"
            [class.ft-card-female]="m.gender==='female'"
            [class.ft-card-other]="m.gender==='other'"
@@ -109,6 +169,11 @@
            [style.--group-color]="groupColor(m.groupId)"
            (click)="selectMember(m)"
            (mousedown)="onDragStart($event, m.id)">
+
+        <!-- Multi-select checkbox -->
+        <div class="ft-card-check" *ngIf="multiSelectMode" (click)="$event.stopPropagation(); selectMember(m)">
+          <mat-icon>{{ selectedMembers.has(m.id) ? 'check_box' : 'check_box_outline_blank' }}</mat-icon>
+        </div>
 
         <span class="ft-gen-badge" [style.background]="genBadgeColor(m.generation)">Gen {{ m.generation }}</span>
 
@@ -120,7 +185,8 @@
         <div class="ft-card-body">
           <div class="ft-card-name">{{ m.name }}</div>
           <div class="ft-card-meta">
-            <span *ngIf="m.age">{{ m.age }} yrs</span>
+            <span *ngIf="m.dob" title="{{ m.dob }}">{{ m.age }} yrs ({{ m.dob | date:'mediumDate' }})</span>
+            <span *ngIf="!m.dob && m.age">{{ m.age }} yrs</span>
             <span class="ft-gender-dot" [style.background]="genderColor(m.gender)"></span>
           </div>
           <div class="ft-spouse" *ngIf="m.spouseId && getMember(m.spouseId)">
@@ -146,6 +212,22 @@
     <p>No members yet. Click <strong>Add Member</strong> to start.</p>
   </div>
 
+  <!-- ── Floating multi-select bar ─────────────────────────────────────── -->
+  <div class="ft-select-bar" *ngIf="multiSelectMode">
+    <div class="ft-select-bar-info">
+      <mat-icon>checklist</mat-icon>
+      <span>{{ selectedMembers.size }} member{{ selectedMembers.size !== 1 ? 's' : '' }} selected</span>
+    </div>
+    <div class="ft-select-bar-actions">
+      <button class="btn-primary" [disabled]="selectedMembers.size === 0" (click)="openBulkEdit()">
+        <mat-icon>edit_note</mat-icon> Bulk Edit
+      </button>
+      <button class="btn-outline" (click)="clearSelection()" [disabled]="selectedMembers.size === 0">Clear</button>
+      <button class="btn-outline" (click)="toggleMultiSelectMode()">
+        <mat-icon>close</mat-icon> Done
+      </button>
+    </div>
+  </div>
 
   <!-- ══════════════════════ GROUP MANAGER MODAL ══════════════════════════════ -->
   <div class="ft-overlay" *ngIf="showGroupMgr" (click)="showGroupMgr=false">
@@ -295,17 +377,27 @@
 
         <div class="ft-form-row-2">
           <div>
-            <label>Age</label>
-            <input class="ft-input" type="number" [(ngModel)]="form.age" min="0" max="150">
+            <label>Date of Birth</label>
+            <input class="ft-input" type="date" [(ngModel)]="form.dob" (ngModelChange)="onDobChange()"
+                   [max]="today">
           </div>
           <div>
-            <label>Gender</label>
-            <select class="ft-input" [(ngModel)]="form.gender">
-              <option value="male">Male</option>
-              <option value="female">Female</option>
-              <option value="other">Other</option>
-            </select>
+            <label>
+              Age
+              <small class="ft-optional" *ngIf="form.dob">(auto-calculated)</small>
+            </label>
+            <input class="ft-input" type="number" [(ngModel)]="form.age" (ngModelChange)="onAgeChange()"
+                   min="0" max="150" placeholder="or enter directly">
           </div>
+        </div>
+
+        <div class="ft-form-row">
+          <label>Gender</label>
+          <select class="ft-input" [(ngModel)]="form.gender">
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+            <option value="other">Other</option>
+          </select>
         </div>
 
         <div class="ft-form-row-2">
@@ -316,24 +408,39 @@
             </select>
           </div>
           <div>
-            <label>
-              Generation
-              <button type="button" class="ft-gen-mode-btn"
-                      [class.active]="form.genMode==='auto'"
-                      (click)="form.genMode='auto'; onRelationshipFormChange()">
-                Auto
-              </button>
-              <button type="button" class="ft-gen-mode-btn"
-                      [class.active]="form.genMode==='manual'"
-                      (click)="form.genMode='manual'">
-                Manual
-              </button>
-            </label>
-            <input class="ft-input"
-                   [class.ft-gen-readonly]="form.genMode==='auto'"
-                   type="number"
-                   [(ngModel)]="form.generation"
-                   [readonly]="form.genMode==='auto'">
+            <!-- Edit mode: generation is display-only, never changed on save -->
+            <ng-container *ngIf="editingMember">
+              <label>
+                Generation
+                <small class="ft-optional" style="color:#94a3b8;font-size:10px;margin-left:4px;">
+                  (locked — use Bulk Edit or Reset Gen to change)
+                </small>
+              </label>
+              <input class="ft-input ft-gen-readonly" type="number"
+                     [ngModel]="form.generation" readonly>
+            </ng-container>
+
+            <!-- Add mode: full Auto / Manual controls -->
+            <ng-container *ngIf="!editingMember">
+              <label>
+                Generation
+                <button type="button" class="ft-gen-mode-btn"
+                        [class.active]="form.genMode==='auto'"
+                        (click)="form.genMode='auto'; onGenerationAutoClick()">
+                  Auto
+                </button>
+                <button type="button" class="ft-gen-mode-btn"
+                        [class.active]="form.genMode==='manual'"
+                        (click)="form.genMode='manual'">
+                  Manual
+                </button>
+              </label>
+              <input class="ft-input"
+                     [class.ft-gen-readonly]="form.genMode==='auto'"
+                     type="number"
+                     [(ngModel)]="form.generation"
+                     [readonly]="form.genMode==='auto'">
+            </ng-container>
           </div>
         </div>
 
@@ -530,5 +637,74 @@
       </div>
     </div>
   </div>
+
+
+  <!-- ══════════════════════ BULK EDIT MODAL ═════════════════════════════════ -->
+  <div class="ft-overlay" *ngIf="showBulkEdit" (click)="showBulkEdit=false">
+    <div class="ft-modal ft-modal-sm" (click)="$event.stopPropagation()">
+      <div class="ft-modal-header">
+        <span><mat-icon>edit_note</mat-icon> Bulk Edit — {{ selectedMembers.size }} member{{ selectedMembers.size !== 1 ? 's' : '' }}</span>
+        <button class="ft-modal-close" (click)="showBulkEdit=false"><mat-icon>close</mat-icon></button>
+      </div>
+      <div class="ft-modal-body">
+
+        <p class="ft-bulk-hint">
+          <mat-icon>info</mat-icon>
+          Check a field to apply it to all selected members. Unchecked fields are left unchanged.
+        </p>
+
+        <!-- Group -->
+        <div class="ft-bulk-row">
+          <label class="ft-bulk-check">
+            <input type="checkbox" [(ngModel)]="bulkForm.applyGroup"> Group
+          </label>
+          <select class="ft-input" [(ngModel)]="bulkForm.groupId" [disabled]="!bulkForm.applyGroup">
+            <option *ngFor="let g of tree.groups" [value]="g.id">{{ g.name }}</option>
+          </select>
+        </div>
+
+        <!-- Generation -->
+        <div class="ft-bulk-row">
+          <label class="ft-bulk-check">
+            <input type="checkbox" [(ngModel)]="bulkForm.applyGeneration"> Generation
+          </label>
+          <input class="ft-input" type="number" [(ngModel)]="bulkForm.generation"
+                 [disabled]="!bulkForm.applyGeneration">
+        </div>
+
+        <!-- Gender -->
+        <div class="ft-bulk-row">
+          <label class="ft-bulk-check">
+            <input type="checkbox" [(ngModel)]="bulkForm.applyGender"> Gender
+          </label>
+          <select class="ft-input" [(ngModel)]="bulkForm.gender" [disabled]="!bulkForm.applyGender">
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+
+        <!-- Notes -->
+        <div class="ft-bulk-row">
+          <label class="ft-bulk-check">
+            <input type="checkbox" [(ngModel)]="bulkForm.applyNotes"> Notes
+          </label>
+          <textarea class="ft-input ft-textarea"
+                    [(ngModel)]="bulkForm.notes"
+                    [disabled]="!bulkForm.applyNotes"
+                    rows="2" placeholder="Overwrite notes on all selected members"></textarea>
+        </div>
+
+      </div>
+      <div class="ft-modal-footer">
+        <button class="btn-outline" (click)="showBulkEdit=false">Cancel</button>
+        <button class="btn-primary" (click)="saveBulkEdit()"
+                [disabled]="!bulkForm.applyGroup && !bulkForm.applyGeneration && !bulkForm.applyGender && !bulkForm.applyNotes">
+          <mat-icon>save</mat-icon> Apply to {{ selectedMembers.size }} member{{ selectedMembers.size !== 1 ? 's' : '' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
 
 </div>

@@ -16,6 +16,11 @@ export class FamilyTreeComponent implements OnInit, OnDestroy {
 
   Math = Math;
 
+  /** ISO date string for today — used as the max bound on the DOB picker. */
+  get today(): string {
+    return new Date().toISOString().split('T')[0];
+  }
+
   tree: FamilyTree = { groups: [], members: [], links: [], activeGroupId: '' };
   filteredMembers: FamilyMember[] = [];
   searchQuery = '';
@@ -28,6 +33,8 @@ export class FamilyTreeComponent implements OnInit, OnDestroy {
   showImport     = false;
   showGroupMgr   = false;
   showCrossConn  = false;
+  showBulkEdit   = false;
+  showLayoutPanel = false;
   editingMember: FamilyMember | null = null;
   quickAddContext: { member: FamilyMember; rel: RelationshipType } | null = null;
 
@@ -37,6 +44,23 @@ export class FamilyTreeComponent implements OnInit, OnDestroy {
   // same-group connect
   connectForm = { fromId: '', toId: '', type: 'child' as RelationshipType };
   relationshipTypes = RELATIONSHIP_TYPES;
+
+  // multi-select
+  multiSelectMode = false;
+  selectedMembers = new Set<string>();
+  bulkForm: {
+    applyGroup: boolean; groupId: string;
+    applyGeneration: boolean; generation: number;
+    applyGender: boolean; gender: string;
+    applyNotes: boolean; notes: string;
+  } = this.emptyBulkForm();
+
+  // layout alignment
+  layoutOpts: {
+    direction: 'vertical' | 'horizontal';
+    spacing:   'compact'  | 'normal' | 'spacious';
+    align:     'left'     | 'center';
+  } = { direction: 'vertical', spacing: 'normal', align: 'center' };
 
   // cross-group connect
   crossConnForm = { fromGroupId: '', fromId: '', toGroupId: '', toId: '', type: 'spouse' as RelationshipType };
@@ -194,7 +218,7 @@ export class FamilyTreeComponent implements OnInit, OnDestroy {
 
   saveCrossConnect() {
     if (!this.crossConnForm.fromId || !this.crossConnForm.toId) return;
-    this.svc.connectMembers(this.crossConnForm.fromId, this.crossConnForm.toId, this.crossConnForm.type);
+    this.svc.connectMembers(this.crossConnForm.fromId, this.crossConnForm.toId, this.crossConnForm.type, undefined, true);
     this.showCrossConn = false;
   }
 
@@ -273,14 +297,28 @@ export class FamilyTreeComponent implements OnInit, OnDestroy {
 
   openEdit(m: FamilyMember) {
     this.editingMember = m;
-    this.form = { ...m, relationshipType: 'child', relatedMemberId: '', genMode: 'manual' };
+    let hasParents = m.parentIds && m.parentIds.length > 0;
+    if (!hasParents && m.spouseId) {
+      const spouse = this.svc.getMember(m.spouseId);
+      if (spouse && spouse.parentIds && spouse.parentIds.length > 0) {
+        hasParents = true;
+      }
+    }
+    this.form = {
+      ...m,
+      relationshipType: 'child',
+      relatedMemberId: '',
+      genMode: hasParents ? 'auto' : 'manual'
+    };
     this.showForm = true;
   }
 
   saveForm() {
     if (!this.form.name?.trim()) return;
     if (this.editingMember) {
-      this.svc.updateMember(this.editingMember.id, this.form);
+      // Never change generation when editing — extract it so Object.assign doesn't overwrite it
+      const { generation, genMode, relationshipType, relatedMemberId, ...patch } = this.form as any;
+      this.svc.updateMember(this.editingMember.id, patch, true);
     } else {
       const nm = this.svc.addMember(this.form);
       if (this.form.relatedMemberId && this.form.relationshipType) {
@@ -306,7 +344,55 @@ export class FamilyTreeComponent implements OnInit, OnDestroy {
   }
 
   selectMember(m: FamilyMember) {
-    this.selectedMember = this.selectedMember?.id === m.id ? null : m;
+    if (this.multiSelectMode) {
+      if (this.selectedMembers.has(m.id)) {
+        this.selectedMembers.delete(m.id);
+      } else {
+        this.selectedMembers.add(m.id);
+      }
+    } else {
+      this.selectedMember = this.selectedMember?.id === m.id ? null : m;
+    }
+  }
+
+  toggleMultiSelectMode() {
+    this.multiSelectMode = !this.multiSelectMode;
+    if (!this.multiSelectMode) {
+      this.selectedMembers.clear();
+      this.showBulkEdit = false;
+    }
+  }
+
+  clearSelection() { this.selectedMembers.clear(); }
+
+  openBulkEdit() {
+    this.bulkForm = this.emptyBulkForm();
+    this.showBulkEdit = true;
+  }
+
+  saveBulkEdit() {
+    const patch: any = {};
+    if (this.bulkForm.applyGroup)      patch.groupId    = this.bulkForm.groupId;
+    if (this.bulkForm.applyGeneration) patch.generation = this.bulkForm.generation;
+    if (this.bulkForm.applyGender)     patch.gender     = this.bulkForm.gender;
+    if (this.bulkForm.applyNotes)      patch.notes      = this.bulkForm.notes;
+    if (!Object.keys(patch).length) return;
+    for (const id of this.selectedMembers) {
+      // preserveGeneration=true so manual generation is not recalculated
+      this.svc.updateMember(id, patch, true);
+    }
+    this.showBulkEdit = false;
+    this.selectedMembers.clear();
+    this.multiSelectMode = false;
+  }
+
+  private emptyBulkForm() {
+    return {
+      applyGroup: false,      groupId: this.tree.activeGroupId,
+      applyGeneration: false, generation: 0,
+      applyGender: false,     gender: 'male',
+      applyNotes: false,      notes: ''
+    };
   }
 
   // ── Same-group connect ─────────────────────────────────────────────────────
@@ -318,7 +404,7 @@ export class FamilyTreeComponent implements OnInit, OnDestroy {
 
   saveConnect() {
     if (!this.connectForm.fromId || !this.connectForm.toId) return;
-    this.svc.connectMembers(this.connectForm.fromId, this.connectForm.toId, this.connectForm.type);
+    this.svc.connectMembers(this.connectForm.fromId, this.connectForm.toId, this.connectForm.type, undefined, true);
     this.showConnect = false;
   }
 
@@ -330,6 +416,20 @@ export class FamilyTreeComponent implements OnInit, OnDestroy {
     }
   }
 
+  onGenerationAutoClick() {
+    if (this.editingMember) {
+      const derived = this.svc.autoDeriveGeneration(this.editingMember.id);
+      this.form.generation = derived !== null ? derived : 0;
+    } else {
+      this.onRelationshipFormChange();
+    }
+  }
+
+  resetGenerationToAuto() {
+    this.form.genMode = 'auto';
+    this.onGenerationAutoClick();
+  }
+
   addCustomField()            { (this.form.customFields = this.form.customFields || []).push({ key: '', value: '' }); }
   removeCustomField(i: number){ this.form.customFields!.splice(i, 1); }
 
@@ -339,6 +439,25 @@ export class FamilyTreeComponent implements OnInit, OnDestroy {
     const reader = new FileReader();
     reader.onload = ev => { this.form.photo = ev.target?.result as string; this.cdr.markForCheck(); };
     reader.readAsDataURL(file);
+  }
+
+  /** Called when the date-of-birth picker changes: recalculate age. */
+  onDobChange() {
+    if (!this.form.dob) {
+      return; // no DOB entered, leave age as-is
+    }
+    const today = new Date();
+    const birth = new Date(this.form.dob as string);
+    let age = today.getFullYear() - birth.getFullYear();
+    const m = today.getMonth() - birth.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+    this.form.age = age >= 0 ? age : null;
+    this.cdr.markForCheck();
+  }
+
+  /** Called when age is typed directly: clear DOB so they don't conflict. */
+  onAgeChange() {
+    this.form.dob = null;
   }
 
   // ── PDF ────────────────────────────────────────────────────────────────────
@@ -362,9 +481,21 @@ export class FamilyTreeComponent implements OnInit, OnDestroy {
 
   clearAll() { if (confirm('Clear all family data?')) this.svc.clearAll(); }
 
+  onResetAllGenerations() {
+    if (confirm('Reset all generations? This will recalculate every member\'s generation based on parent-child relationships (roots = 0, children = parent + 1).')) {
+      this.svc.resetAllGenerations();
+    }
+  }
+
+  applyAlign() {
+    this.svc.alignLayout(this.layoutOpts);
+    this.canvasOffset = { x: 0, y: 0 };
+    this.showLayoutPanel = false;
+  }
+
   private emptyForm(): any {
     return {
-      name: '', age: null, gender: 'male', photo: null, notes: '',
+      name: '', age: null, dob: null, gender: 'male', photo: null, notes: '',
       generation: 0, customFields: [], relationshipType: 'child', relatedMemberId: '',
       spouseId: null, parentIds: [], childIds: [], siblingIds: [],
       groupId: this.tree.activeGroupId,

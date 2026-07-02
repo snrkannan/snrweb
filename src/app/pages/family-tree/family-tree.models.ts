@@ -14,6 +14,7 @@ export interface FamilyMember {
   groupId: string;             // which group this member belongs to
   name: string;
   age: number | null;
+  dob: string | null;          // date of birth in ISO format (YYYY-MM-DD)
   gender: Gender;
   photo: string | null;
   notes: string;

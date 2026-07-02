@@ -88,7 +88,7 @@ export class FamilyTreeService {
   private makeMember(name: string, age: number | null, gender: Gender, generation: number, groupId: string): FamilyMember {
     return {
       id: this.uid(), groupId, name, age, gender, photo: null, notes: '',
-      customFields: [], generation,
+      customFields: [], generation, dob: null,
       spouseId: null, parentIds: [], childIds: [], siblingIds: [],
       x: 0, y: 0
     };
@@ -182,6 +182,7 @@ export class FamilyTreeService {
       groupId: data.groupId || this.tree.activeGroupId,
       name: data.name || 'New Member',
       age: data.age ?? null,
+      dob: data.dob ?? null,
       gender: data.gender || 'male',
       photo: data.photo || null,
       notes: data.notes || '',
@@ -198,10 +199,13 @@ export class FamilyTreeService {
     return m;
   }
 
-  updateMember(id: string, data: Partial<FamilyMember>) {
+  updateMember(id: string, data: Partial<FamilyMember>, preserveGeneration = false) {
     const m = this.getMember(id);
     if (!m) return;
     Object.assign(m, data);
+    if (!preserveGeneration) {
+      this.recalcDescendants(id);
+    }
     this.buildLinks();
     this.layoutAll();
     this.save();
@@ -220,75 +224,123 @@ export class FamilyTreeService {
     this.save();
   }
 
-  connectMembers(fromId: string, toId: string, type: RelationshipType, childGen?: number) {
+  connectMembers(fromId: string, toId: string, type: RelationshipType, childGen?: number, preserveGenerations = false) {
     const from = this.getMember(fromId);
     const to   = this.getMember(toId);
     if (!from || !to) return;
 
     switch (type) {
+      // ── Spouse ─────────────────────────────────────────────────────────────
       case 'spouse':
-        from.spouseId = toId; to.spouseId = fromId;
-        to.generation = from.generation;
+        from.spouseId = toId;
+        to.spouseId   = fromId;
+        // Rule: spouse connection does NOT change any generation
         break;
+
+      // ── Adding a parent to an existing child ───────────────────────────────
       case 'father': case 'mother':
         if (!to.parentIds.includes(fromId)) to.parentIds.push(fromId);
         if (!from.childIds.includes(toId))  from.childIds.push(toId);
-        // parent is always one generation above the child
-        from.generation = to.generation - 1;
+        if (!preserveGenerations) {
+          // Simple rule: new parent = child.generation - 1
+          from.generation = to.generation - 1;
+          // Sync the parent's spouse to the same generation
+          if (from.spouseId) {
+            const spouse = this.getMember(from.spouseId);
+            if (spouse) spouse.generation = from.generation;
+          }
+        }
+        // Also wire spouse as co-parent if present
         if (from.spouseId) {
           const spouse = this.getMember(from.spouseId);
           if (spouse) {
-            spouse.generation = from.generation;
             if (!to.parentIds.includes(from.spouseId)) to.parentIds.push(from.spouseId);
             if (!spouse.childIds.includes(toId)) spouse.childIds.push(toId);
           }
         }
         break;
+
+      // ── Adding a child ─────────────────────────────────────────────────────
       case 'son': case 'daughter': case 'child':
-        if (!from.childIds.includes(toId))  from.childIds.push(toId);
-        if (!to.parentIds.includes(fromId)) to.parentIds.push(fromId);
-        // use provided generation if given, otherwise derive from parent
-        to.generation = childGen !== undefined ? childGen : from.generation + 1;
-        if (from.spouseId) {
-          const spouse = this.getMember(from.spouseId);
+        if (!from.parentIds.includes(toId)) from.parentIds.push(toId);
+        if (!to.childIds.includes(fromId))  to.childIds.push(fromId);
+        if (!preserveGenerations) {
+          // Simple rule: new child = chosen parent.generation + 1
+          // childGen is pre-derived from the chosen parent in the component
+          from.generation = childGen !== undefined ? childGen : to.generation + 1;
+        }
+        // Wire parent's spouse as co-parent (relationship only, no generation change)
+        if (to.spouseId) {
+          const spouse = this.getMember(to.spouseId);
           if (spouse) {
-            if (!to.parentIds.includes(from.spouseId)) to.parentIds.push(from.spouseId);
-            if (!spouse.childIds.includes(toId)) spouse.childIds.push(toId);
+            if (!from.parentIds.includes(to.spouseId)) from.parentIds.push(to.spouseId);
+            if (!spouse.childIds.includes(fromId)) spouse.childIds.push(fromId);
           }
         }
         break;
+
+      // ── Grandparent ────────────────────────────────────────────────────────
       case 'grandfather': case 'grandmother':
-        from.generation = to.generation - 2;
-        if (from.spouseId) {
-          const spouse = this.getMember(from.spouseId);
-          if (spouse) spouse.generation = from.generation;
+        if (!preserveGenerations) {
+          from.generation = to.generation - 2;
+          if (from.spouseId) {
+            const spouse = this.getMember(from.spouseId);
+            if (spouse) spouse.generation = from.generation;
+          }
         }
         if (!to.parentIds.some(pid => this.getMember(pid)?.parentIds.includes(fromId))) {
           from.childIds.push(this.ensureParentBridge(from, to));
         }
         break;
+
+      // ── Sibling ────────────────────────────────────────────────────────────
       case 'brother': case 'sister':
         if (!from.siblingIds.includes(toId)) from.siblingIds.push(toId);
         if (!to.siblingIds.includes(fromId)) to.siblingIds.push(fromId);
-        to.generation = from.generation;
+        // Rule: sibling connection does NOT change any generation
         break;
     }
 
-    // Cascade: recalculate all descendants' generations based on their parents
-    this.recalcDescendants();
+    // No recalcDescendants cascade — only the directly added member's
+    // generation is set (parent+1 or child-1). All other members are untouched.
     this.buildLinks();
     this.layoutAll();
     this.save();
   }
 
+
   // Recalculates generation for every member that has parents, bottom-up BFS
-  private recalcDescendants() {
+  private recalcDescendants(editedId?: string) {
     const visited = new Set<string>();
     const queue: string[] = [];
 
     // Start from members with no parents (roots)
-    for (const m of this.tree.members) {
-      if (m.parentIds.length === 0) queue.push(m.id);
+    const roots = this.tree.members.filter(m => m.parentIds.length === 0);
+    const rootsToEnqueue = new Set<string>();
+    const seenSpouseRoots = new Set<string>();
+
+    if (editedId) {
+      const editedMember = this.getMember(editedId);
+      if (editedMember && editedMember.parentIds.length === 0) {
+        rootsToEnqueue.add(editedId);
+        if (editedMember.spouseId) {
+          seenSpouseRoots.add(editedMember.spouseId);
+        }
+      }
+    }
+
+    for (const m of roots) {
+      if (rootsToEnqueue.has(m.id) || seenSpouseRoots.has(m.id)) {
+        continue;
+      }
+      rootsToEnqueue.add(m.id);
+      if (m.spouseId) {
+        seenSpouseRoots.add(m.spouseId);
+      }
+    }
+
+    for (const rid of rootsToEnqueue) {
+      queue.push(rid);
     }
 
     while (queue.length) {
@@ -321,6 +373,107 @@ export class FamilyTreeService {
         if (!visited.has(cid)) queue.push(cid);
       }
     }
+  }
+
+  autoDeriveGeneration(id: string): number | null {
+    const m = this.getMember(id);
+    if (!m) return null;
+
+    if (m.parentIds && m.parentIds.length > 0) {
+      const parentGens = m.parentIds
+        .map(pid => this.getMember(pid)?.generation)
+        .filter((g): g is number => g !== undefined);
+      if (parentGens.length > 0) {
+        return Math.max(...parentGens) + 1;
+      }
+    }
+
+    if (m.spouseId) {
+      const spouse = this.getMember(m.spouseId);
+      if (spouse) return spouse.generation;
+    }
+
+    if (m.siblingIds && m.siblingIds.length > 0) {
+      const siblingGens = m.siblingIds
+        .map(sid => this.getMember(sid)?.generation)
+        .filter((g): g is number => g !== undefined);
+      if (siblingGens.length > 0) {
+        return siblingGens[0];
+      }
+    }
+
+    if (m.childIds && m.childIds.length > 0) {
+      const childGens = m.childIds
+        .map(cid => this.getMember(cid)?.generation)
+        .filter((g): g is number => g !== undefined);
+      if (childGens.length > 0) {
+        return Math.min(...childGens) - 1;
+      }
+    }
+
+    return null;
+  }
+
+  /** Globally reset & recalculate every member's generation from scratch based
+   *  purely on parent-child relationships. Root members (no parents) get
+   *  generation 0, and each child is parent-generation + 1.
+   *  Spouses of roots are synced to their spouse's generation.
+   */
+  resetAllGenerations() {
+    const visited = new Set<string>();
+    const queue: string[] = [];
+
+    // Identify true roots (no parents). For each spouse pair of roots only
+    // enqueue the one that comes first to avoid double-processing.
+    const seenSpouseRoots = new Set<string>();
+    for (const m of this.tree.members) {
+      if (m.parentIds.length === 0 && !seenSpouseRoots.has(m.id)) {
+        m.generation = 0; // reset root to 0
+        queue.push(m.id);
+        if (m.spouseId) {
+          seenSpouseRoots.add(m.spouseId);
+          const spouse = this.getMember(m.spouseId);
+          if (spouse && spouse.parentIds.length === 0) {
+            spouse.generation = 0; // reset spouse root to 0
+          }
+        }
+      }
+    }
+
+    while (queue.length) {
+      const id = queue.shift()!;
+      if (visited.has(id)) continue;
+      visited.add(id);
+      const m = this.getMember(id);
+      if (!m) continue;
+
+      // Recalculate generation from parents
+      if (m.parentIds.length > 0) {
+        const parentGens = m.parentIds
+          .map(pid => this.getMember(pid)?.generation)
+          .filter((g): g is number => g !== undefined);
+        if (parentGens.length > 0) {
+          m.generation = Math.max(...parentGens) + 1;
+        }
+      }
+
+      // Sync spouse to same generation
+      if (m.spouseId) {
+        const spouse = this.getMember(m.spouseId);
+        if (spouse && spouse.parentIds.length === 0) {
+          spouse.generation = m.generation;
+        }
+      }
+
+      // Enqueue children
+      for (const cid of m.childIds) {
+        if (!visited.has(cid)) queue.push(cid);
+      }
+    }
+
+    this.buildLinks();
+    this.layoutAll();
+    this.save();
   }
 
   private ensureParentBridge(gp: FamilyMember, gc: FamilyMember): string {
@@ -360,6 +513,31 @@ export class FamilyTreeService {
 
   // ── Layout ─────────────────────────────────────────────────────────────────
 
+  /** Re-runs auto-layout with configurable options. */
+  alignLayout(opts: {
+    direction: 'vertical' | 'horizontal';
+    spacing:   'compact'  | 'normal' | 'spacious';
+    align:     'left'     | 'center';
+  }) {
+    if (!this.tree.members.length) return;
+
+    const spacingMap = {
+      compact:  { hGap: 20, vGap: 50,  groupGap: 80  },
+      normal:   { hGap: 40, vGap: 80,  groupGap: 120 },
+      spacious: { hGap: 70, vGap: 120, groupGap: 180 },
+    };
+    const s = spacingMap[opts.spacing];
+
+    let offset = 0;
+    for (const group of this.tree.groups) {
+      const members = this.getMembersInGroup(group.id);
+      if (!members.length) continue;
+      const size = this.layoutGroupWith(members, offset, opts.direction, s, opts.align);
+      offset += size + s.groupGap;
+    }
+    this.save();
+  }
+
   layoutAll() {
     if (!this.tree.members.length) return;
 
@@ -369,6 +547,67 @@ export class FamilyTreeService {
       if (!members.length) continue;
       const groupWidth = this.layoutGroup(members, xOffset);
       xOffset += groupWidth + GROUP_GAP;
+    }
+  }
+
+  private layoutGroupWith(
+    members: FamilyMember[], offset: number,
+    direction: 'vertical' | 'horizontal',
+    s: { hGap: number; vGap: number },
+    align: 'left' | 'center'
+  ): number {
+    const gens = new Map<number, FamilyMember[]>();
+    for (const m of members) {
+      if (!gens.has(m.generation)) gens.set(m.generation, []);
+      gens.get(m.generation)!.push(m);
+    }
+    const sortedGens = Array.from(gens.keys()).sort((a, b) => a - b);
+
+    if (direction === 'vertical') {
+      // Generations as horizontal rows, stacked top-to-bottom
+      let maxRowWidth = 0;
+      sortedGens.forEach((gen, rowIndex) => {
+        const row = gens.get(gen)!;
+        const ordered = this.orderRowBySpouse(row);
+        const rowWidth = ordered.length * (CARD_W + s.hGap) - s.hGap;
+        maxRowWidth = Math.max(maxRowWidth, rowWidth);
+        ordered.forEach((m, ci) => {
+          m.x = offset + ci * (CARD_W + s.hGap);
+          m.y = rowIndex * (CARD_H + s.vGap);
+        });
+      });
+      if (align === 'center') {
+        // Re-centre each row around the widest row
+        sortedGens.forEach((gen, rowIndex) => {
+          const ordered = this.orderRowBySpouse(gens.get(gen)!);
+          const rowWidth = ordered.length * (CARD_W + s.hGap) - s.hGap;
+          const rowOffset = Math.floor((maxRowWidth - rowWidth) / 2);
+          ordered.forEach(m => { m.x += rowOffset; });
+        });
+      }
+      return maxRowWidth;
+    } else {
+      // Horizontal: Generations as vertical columns, placed left-to-right
+      let maxColHeight = 0;
+      sortedGens.forEach((gen, colIndex) => {
+        const col = gens.get(gen)!;
+        const ordered = this.orderRowBySpouse(col);
+        const colHeight = ordered.length * (CARD_H + s.vGap) - s.vGap;
+        maxColHeight = Math.max(maxColHeight, colHeight);
+        ordered.forEach((m, ri) => {
+          m.x = offset + colIndex * (CARD_W + s.hGap);
+          m.y = ri * (CARD_H + s.vGap);
+        });
+      });
+      if (align === 'center') {
+        sortedGens.forEach(gen => {
+          const ordered = this.orderRowBySpouse(gens.get(gen)!);
+          const colHeight = ordered.length * (CARD_H + s.vGap) - s.vGap;
+          const colOffset = Math.floor((maxColHeight - colHeight) / 2);
+          ordered.forEach(m => { m.y += colOffset; });
+        });
+      }
+      return sortedGens.length * (CARD_W + s.hGap) - s.hGap;
     }
   }
 
