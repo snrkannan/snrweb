@@ -4,6 +4,14 @@
   <div class="ft-toolbar">
     <div class="ft-toolbar-left">
       <span class="ft-title"><mat-icon>account_tree</mat-icon> Family Tree</span>
+      <div class="ft-view-toggle">
+        <button class="ft-view-btn" [class.active]="viewMode==='canvas'" (click)="viewMode='canvas'" title="Canvas view">
+          <mat-icon>hub</mat-icon> Canvas
+        </button>
+        <button class="ft-view-btn" [class.active]="viewMode==='list'" (click)="viewMode='list'" title="List view">
+          <mat-icon>list</mat-icon> List
+        </button>
+      </div>
     </div>
 
     <div class="ft-search">
@@ -91,7 +99,9 @@
     </div>
   </div>
 
-  <!-- ── Group tabs ─────────────────────────────────────────────────────────── -->
+  <!-- ── Group tabs (canvas only) ────────────────────────────────────────── -->
+  <ng-container *ngIf="viewMode==='canvas'">
+
   <div class="ft-group-tabs">
     <button *ngFor="let g of tree.groups"
             class="ft-group-tab"
@@ -107,12 +117,31 @@
     </button>
   </div>
 
-  <!-- ── Zoom bar ───────────────────────────────────────────────────────────── -->
+  <!-- ── Zoom + Style bar ─────────────────────────────────────────── -->
   <div class="ft-zoom-bar">
     <button class="btn-icon-sm" (click)="zoom=Math.min(2,zoom+0.1)"><mat-icon>add</mat-icon></button>
     <span class="ft-zoom-label">{{ (zoom*100)|number:'1.0-0' }}%</span>
     <button class="btn-icon-sm" (click)="zoom=Math.max(0.3,zoom-0.1)"><mat-icon>remove</mat-icon></button>
     <button class="btn-icon-sm" (click)="zoom=1; canvasOffset={x:0,y:0}" title="Reset"><mat-icon>center_focus_strong</mat-icon></button>
+    <span class="ft-zoom-divider"></span>
+
+    <!-- Card style picker -->
+    <span class="ft-style-label">Style:</span>
+    <div class="ft-card-style-picker">
+      <button class="ft-csp-btn" [class.active]="cardStyle==='compact'"   (click)="cardStyle='compact'"   title="Compact — name only">
+        <mat-icon>view_headline</mat-icon>
+      </button>
+      <button class="ft-csp-btn" [class.active]="cardStyle==='standard'"  (click)="cardStyle='standard'"  title="Standard — name + age + gender">
+        <mat-icon>credit_card</mat-icon>
+      </button>
+      <button class="ft-csp-btn" [class.active]="cardStyle==='detailed'"  (click)="cardStyle='detailed'"  title="Detailed — all fields + notes">
+        <mat-icon>article</mat-icon>
+      </button>
+      <button class="ft-csp-btn" [class.active]="cardStyle==='photo'"     (click)="cardStyle='photo'"     title="Photo — large avatar">
+        <mat-icon>portrait</mat-icon>
+      </button>
+    </div>
+
     <span class="ft-zoom-divider"></span>
     <span *ngFor="let g of tree.groups" class="ft-legend-item">
       <span class="ft-legend-dot" [style.background]="g.color"></span>{{ g.name }}
@@ -159,6 +188,9 @@
       <!-- Member cards -->
       <div *ngFor="let m of tree.members"
            class="ft-card"
+           [class.ft-card-s-compact]="cardStyle==='compact'"
+           [class.ft-card-s-detailed]="cardStyle==='detailed'"
+           [class.ft-card-s-photo]="cardStyle==='photo'"
            [class.ft-card-selected]="selectedMember?.id === m.id"
            [class.ft-card-multi-selected]="selectedMembers.has(m.id)"
            [class.ft-card-male]="m.gender==='male'"
@@ -177,24 +209,39 @@
 
         <span class="ft-gen-badge" [style.background]="genBadgeColor(m.generation)">Gen {{ m.generation }}</span>
 
-        <div class="ft-avatar">
-          <img *ngIf="m.photo" [src]="m.photo" alt="photo">
-          <mat-icon *ngIf="!m.photo">{{ m.gender==='female' ? 'face_3' : 'face' }}</mat-icon>
+        <!-- ── Horizontal: avatar left · details right ── -->
+        <div class="ft-card-main">
+          <div class="ft-avatar">
+            <img *ngIf="m.photo" [src]="m.photo" alt="photo">
+            <mat-icon *ngIf="!m.photo">{{ m.gender==='female' ? 'face_3' : 'face' }}</mat-icon>
+          </div>
+
+          <div class="ft-card-body">
+            <div class="ft-card-name">{{ m.name }}</div>
+            <div class="ft-card-meta" *ngIf="cardStyle !== 'compact'">
+              <span *ngIf="m.dob" title="{{ m.dob }}">{{ m.age }} yrs ({{ m.dob | date:'mediumDate' }})</span>
+              <span *ngIf="!m.dob && m.age">{{ m.age }} yrs</span>
+              <span class="ft-gender-dot" [style.background]="genderColor(m.gender)"></span>
+            </div>
+            <div class="ft-spouse" *ngIf="m.spouseId && getMember(m.spouseId) && cardStyle !== 'compact'">
+              <mat-icon style="font-size:10px;width:10px;height:10px;">favorite</mat-icon>
+              {{ getMember(m.spouseId)?.name }}
+            </div>
+            <!-- Detailed-mode extras -->
+            <ng-container *ngIf="cardStyle === 'detailed'">
+              <div class="ft-card-notes" *ngIf="m.notes">
+                {{ m.notes.length > 80 ? (m.notes | slice:0:80) + '…' : m.notes }}
+              </div>
+              <div class="ft-card-cf" *ngIf="m.customFields?.length">
+                <span *ngFor="let cf of m.customFields | slice:0:3" class="ft-cf-chip">
+                  {{ cf.key }}: {{ cf.value }}
+                </span>
+              </div>
+            </ng-container>
+          </div>
         </div>
 
-        <div class="ft-card-body">
-          <div class="ft-card-name">{{ m.name }}</div>
-          <div class="ft-card-meta">
-            <span *ngIf="m.dob" title="{{ m.dob }}">{{ m.age }} yrs ({{ m.dob | date:'mediumDate' }})</span>
-            <span *ngIf="!m.dob && m.age">{{ m.age }} yrs</span>
-            <span class="ft-gender-dot" [style.background]="genderColor(m.gender)"></span>
-          </div>
-          <div class="ft-spouse" *ngIf="m.spouseId && getMember(m.spouseId)">
-            <mat-icon style="font-size:11px;width:11px;height:11px;">favorite</mat-icon>
-            {{ getMember(m.spouseId)?.name }}
-          </div>
-        </div>
-
+        <!-- ── Actions always visible at bottom ── -->
         <div class="ft-card-actions" (click)="$event.stopPropagation()">
           <button class="ft-action-btn" (click)="openEdit(m)"                  title="Edit"><mat-icon>edit</mat-icon></button>
           <button class="ft-action-btn" (click)="openAddRelative(m,'spouse')"  title="Add Spouse"><mat-icon>favorite</mat-icon></button>
@@ -210,6 +257,133 @@
   <div class="ft-empty" *ngIf="!tree.members.length">
     <mat-icon>account_tree</mat-icon>
     <p>No members yet. Click <strong>Add Member</strong> to start.</p>
+  </div>
+
+  </ng-container><!-- end canvas mode -->
+
+
+  <!-- ══════════════════════ LIST VIEW ══════════════════════════════════════ -->
+  <div class="ft-list-view" *ngIf="viewMode==='list'">
+
+    <div class="ft-list-header">
+      <span class="ft-list-count">{{ sortedListMembers.length }} member{{ sortedListMembers.length !== 1 ? 's' : '' }}</span>
+      <span class="ft-list-hint"><mat-icon>info</mat-icon> Click a column header to sort. Click <mat-icon style="font-size:14px;vertical-align:middle">hub</mat-icon> to jump to the canvas.</span>
+    </div>
+
+    <div class="ft-list-wrap">
+      <table class="ft-list-table">
+        <thead>
+          <tr>
+            <th class="ft-th-avatar"></th>
+            <th class="ft-th-sort" (click)="setListSort('name')">
+              Name <mat-icon *ngIf="listSort.col==='name'">{{ listSort.dir===1 ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+            </th>
+            <th class="ft-th-sort" (click)="setListSort('gender')">
+              Gender <mat-icon *ngIf="listSort.col==='gender'">{{ listSort.dir===1 ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+            </th>
+            <th class="ft-th-sort" (click)="setListSort('age')">
+              Age <mat-icon *ngIf="listSort.col==='age'">{{ listSort.dir===1 ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+            </th>
+            <th class="ft-th-sort" (click)="setListSort('generation')">
+              Gen <mat-icon *ngIf="listSort.col==='generation'">{{ listSort.dir===1 ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+            </th>
+            <th class="ft-th-sort" (click)="setListSort('group')">
+              Group <mat-icon *ngIf="listSort.col==='group'">{{ listSort.dir===1 ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+            </th>
+            <th class="ft-th-sort" (click)="setListSort('spouse')">
+              Spouse <mat-icon *ngIf="listSort.col==='spouse'">{{ listSort.dir===1 ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+            </th>
+            <th class="ft-th-sort" (click)="setListSort('parents')">
+              Parents <mat-icon *ngIf="listSort.col==='parents'">{{ listSort.dir===1 ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+            </th>
+            <th class="ft-th-sort" (click)="setListSort('children')">
+              Children <mat-icon *ngIf="listSort.col==='children'">{{ listSort.dir===1 ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+            </th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let m of sortedListMembers" class="ft-list-row"
+              [class.ft-list-row-male]="m.gender==='male'"
+              [class.ft-list-row-female]="m.gender==='female'"
+              [class.ft-list-row-other]="m.gender==='other'">
+
+            <!-- Avatar -->
+            <td class="ft-list-avatar-cell">
+              <div class="ft-list-avatar" [style.border-color]="genderColor(m.gender)">
+                <img *ngIf="m.photo" [src]="m.photo" alt="">
+                <mat-icon *ngIf="!m.photo" [style.color]="genderColor(m.gender)">
+                  {{ m.gender==='female' ? 'face_3' : 'face' }}
+                </mat-icon>
+              </div>
+            </td>
+
+            <!-- Name + DOB -->
+            <td class="ft-list-name-cell">
+              <span class="ft-list-name">{{ m.name }}</span>
+              <small *ngIf="m.dob" class="ft-list-sub">{{ m.dob | date:'dd MMM yyyy' }}</small>
+            </td>
+
+            <!-- Gender -->
+            <td>
+              <span class="ft-list-gender-pill" [style.background]="genderColor(m.gender)">
+                {{ m.gender | titlecase }}
+              </span>
+            </td>
+
+            <!-- Age -->
+            <td class="ft-list-num">{{ m.age || '—' }}</td>
+
+            <!-- Generation -->
+            <td class="ft-list-num">
+              <span class="ft-list-gen-badge" [style.background]="genBadgeColor(m.generation)">
+                Gen {{ m.generation }}
+              </span>
+            </td>
+
+            <!-- Group -->
+            <td>
+              <span class="ft-list-group-dot" [style.background]="groupColor(m.groupId)"></span>
+              {{ getGroup(m.groupId)?.name }}
+            </td>
+
+            <!-- Spouse -->
+            <td class="ft-list-rel">
+              <span *ngIf="getMember(m.spouseId || '')">❤ {{ getMember(m.spouseId || '')?.name }}</span>
+              <span *ngIf="!getMember(m.spouseId || '')" class="ft-list-empty">—</span>
+            </td>
+
+            <!-- Parents -->
+            <td class="ft-list-rel">
+              <div *ngFor="let pid of m.parentIds">
+                <span *ngIf="getMember(pid)">{{ getMember(pid)?.name }}</span>
+              </div>
+              <span *ngIf="!m.parentIds?.length" class="ft-list-empty">—</span>
+            </td>
+
+            <!-- Children -->
+            <td class="ft-list-rel">
+              <div *ngFor="let cid of m.childIds">
+                <span *ngIf="getMember(cid)">{{ getMember(cid)?.name }}</span>
+              </div>
+              <span *ngIf="!m.childIds?.length" class="ft-list-empty">—</span>
+            </td>
+
+            <!-- Actions -->
+            <td class="ft-list-actions-cell">
+              <button class="ft-action-btn" (click)="openEdit(m)" title="Edit"><mat-icon>edit</mat-icon></button>
+              <button class="ft-action-btn" (click)="jumpToCanvas(m)" title="View on canvas"><mat-icon>hub</mat-icon></button>
+              <button class="ft-action-btn ft-action-del" (click)="confirmDelete(m)" title="Delete"><mat-icon>delete</mat-icon></button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="ft-list-empty-state" *ngIf="!sortedListMembers.length">
+        <mat-icon>group_off</mat-icon>
+        <p>No members found.</p>
+      </div>
+    </div>
   </div>
 
   <!-- ── Floating multi-select bar ─────────────────────────────────────── -->

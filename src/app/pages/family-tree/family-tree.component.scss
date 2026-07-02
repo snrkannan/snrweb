@@ -148,7 +148,7 @@
 
 // ── Member card ───────────────────────────────────────────────────────────────
 .ft-card {
-  position: absolute; width: 160px; border-radius: 12px;
+  position: absolute; width: 200px; border-radius: 12px;
   background: white; border: 2px solid #e2e8f0;
   box-shadow: 0 2px 8px rgba(0,0,0,0.08);
   cursor: grab; user-select: none;
@@ -164,29 +164,34 @@
   &.ft-card-other   { border-top: 3px solid #8b5cf6; }
 }
 
-.ft-gen-badge {
-  position: absolute; top: -8px; right: 8px;
-  font-size: 9px; font-weight: 700; color: white;
-  padding: 1px 6px; border-radius: 10px; line-height: 1.6;
+// ── Horizontal card layout ────────────────────────────────────────────────────
+.ft-card-main {
+  display: flex; flex-direction: row; align-items: center;
+  gap: 10px; padding: 10px 10px 6px;
 }
 
 .ft-avatar {
+  flex-shrink: 0;
+  width: 44px; height: 44px; border-radius: 50%;
+  border: 2px solid #e2e8f0; overflow: hidden;
+  background: #f8fafc;
   display: flex; align-items: center; justify-content: center;
-  height: 44px; padding-top: 8px;
-  img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid #e2e8f0; }
-  mat-icon { font-size: 30px; width: 30px; height: 30px; color: #94a3b8; }
+  img { width: 100%; height: 100%; object-fit: cover; }
+  mat-icon { font-size: 28px; width: 28px; height: 28px; color: #94a3b8; }
 }
 
-.ft-card-body { padding: 4px 10px 6px; flex: 1; }
-.ft-card-name { font-size: 13px; font-weight: 700; color: #1e293b; text-align: center; line-height: 1.2; margin-bottom: 2px; }
-.ft-card-meta { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 11px; color: #64748b; }
-.ft-gender-dot { width: 8px; height: 8px; border-radius: 50%; }
-.ft-spouse { font-size: 10px; color: #ec4899; text-align: center; display: flex; align-items: center; justify-content: center; gap: 2px; margin-top: 2px; }
+.ft-card-body { flex: 1; min-width: 0; }
+.ft-card-name { font-size: 13px; font-weight: 700; color: #1e293b; line-height: 1.2; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ft-card-meta { display: flex; align-items: center; gap: 4px; font-size: 10px; color: #64748b; flex-wrap: wrap; }
+.ft-gender-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.ft-spouse { font-size: 10px; color: #ec4899; display: flex; align-items: center; gap: 2px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
+// ── Actions bar — always visible ─────────────────────────────────────────────
 .ft-card-actions {
-  display: none; justify-content: center; gap: 3px; padding: 4px 6px 6px;
-  flex-wrap: wrap;
-  .ft-card:hover & { display: flex; }
+  display: flex; justify-content: center; gap: 4px;
+  padding: 5px 6px 6px;
+  border-top: 1px solid #f0f4f8;
+  background: #fafbfc; border-radius: 0 0 10px 10px;
 }
 .ft-action-btn {
   background: #f1f5f9; border: none; border-radius: 6px; cursor: pointer;
@@ -198,6 +203,24 @@
   &[title="Add Parent"]:hover { background: #eff6ff; mat-icon { color: #2563eb; } }
 }
 .ft-action-del:hover { background: #fee2e2 !important; mat-icon { color: #dc3545 !important; } }
+
+.ft-gen-badge {
+  position: absolute; top: -8px; right: 8px;
+  font-size: 9px; font-weight: 700; color: white;
+  padding: 1px 6px; border-radius: 10px; line-height: 1.6; z-index: 1;
+}
+
+.ft-card-notes {
+  font-size: 10px; color: #64748b; margin-top: 4px; line-height: 1.4;
+  padding: 3px 6px; background: #f8fafc; border-radius: 4px;
+  border-left: 2px solid #e2e8f0;
+}
+.ft-card-cf { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 4px; }
+.ft-cf-chip {
+  font-size: 9px; font-weight: 600; color: #64748b;
+  background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 8px;
+  padding: 1px 6px; white-space: nowrap;
+}
 
 // ── Empty state ───────────────────────────────────────────────────────────────
 .ft-empty {
@@ -460,4 +483,191 @@
 @keyframes slideDown {
   from { opacity: 0; transform: translateY(-8px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+
+// ── View toggle ───────────────────────────────────────────────────────────────
+.ft-view-toggle {
+  display: flex; margin-left: 16px;
+  border: 1.5px solid #e2e8f0; border-radius: 8px; overflow: hidden;
+}
+.ft-view-btn {
+  display: flex; align-items: center; gap: 4px;
+  padding: 5px 12px; font-size: 12px; font-weight: 600;
+  border: none; background: white; color: #64748b; cursor: pointer;
+  transition: all 0.15s ease;
+  mat-icon { font-size: 15px; width: 15px; height: 15px; }
+  &:hover { background: var(--snr-primary-light); color: var(--snr-primary); }
+  &.active {
+    background: var(--snr-primary); color: white;
+    mat-icon { color: white; }
+  }
+  & + & { border-left: 1.5px solid #e2e8f0; }
+}
+
+// ── List view ─────────────────────────────────────────────────────────────────
+.ft-list-view {
+  display: flex; flex-direction: column; flex: 1; overflow: hidden;
+  background: #f8f9fa;
+}
+.ft-list-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 20px; background: white; border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
+}
+.ft-list-count {
+  font-size: 13px; font-weight: 700; color: var(--snr-primary);
+}
+.ft-list-hint {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 12px; color: #94a3b8;
+  mat-icon { font-size: 14px; width: 14px; height: 14px; }
+}
+.ft-list-wrap {
+  flex: 1; overflow: auto; padding: 16px 20px;
+}
+.ft-list-table {
+  width: 100%; border-collapse: collapse;
+  background: white; border-radius: 12px; overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+
+  thead tr {
+    background: #f8fafc; border-bottom: 2px solid #e5e7eb;
+  }
+
+  th {
+    padding: 10px 12px; text-align: left;
+    font-size: 11px; font-weight: 700; color: #64748b;
+    text-transform: uppercase; letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+
+  .ft-th-sort {
+    cursor: pointer; user-select: none;
+    display: table-cell;
+    mat-icon { font-size: 13px; width: 13px; height: 13px; vertical-align: middle; margin-left: 2px; }
+    &:hover { color: var(--snr-primary); background: var(--snr-primary-light); }
+  }
+
+  .ft-th-avatar { width: 44px; }
+
+  td { padding: 10px 12px; border-bottom: 1px solid #f0f4f8; vertical-align: middle; }
+}
+
+.ft-list-row {
+  transition: background 0.12s ease;
+  border-left: 3px solid transparent;
+
+  &:hover { background: #f8fafc; }
+  &.ft-list-row-male    { border-left-color: #3b82f6; }
+  &.ft-list-row-female  { border-left-color: #ec4899; }
+  &.ft-list-row-other   { border-left-color: #8b5cf6; }
+  &:last-child td       { border-bottom: none; }
+}
+
+.ft-list-avatar-cell { width: 44px; }
+.ft-list-avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  border: 2px solid #e2e8f0; overflow: hidden;
+  display: flex; align-items: center; justify-content: center; background: #f8fafc;
+  img { width: 100%; height: 100%; object-fit: cover; }
+  mat-icon { font-size: 22px; width: 22px; height: 22px; }
+}
+.ft-list-name-cell {
+  display: flex; flex-direction: column;
+}
+.ft-list-name { font-size: 13px; font-weight: 700; color: #1e293b; }
+.ft-list-sub  { font-size: 11px; color: #94a3b8; margin-top: 1px; }
+
+.ft-list-gender-pill {
+  display: inline-block; padding: 2px 8px; border-radius: 10px;
+  font-size: 11px; font-weight: 600; color: white;
+}
+.ft-list-num { font-size: 13px; font-weight: 600; color: #374151; text-align: center; }
+.ft-list-gen-badge {
+  display: inline-block; padding: 2px 7px; border-radius: 10px;
+  font-size: 10px; font-weight: 700; color: white;
+}
+.ft-list-group-dot {
+  display: inline-block; width: 8px; height: 8px;
+  border-radius: 50%; margin-right: 5px; vertical-align: middle;
+}
+.ft-list-rel {
+  font-size: 12px; color: #374151;
+  div { line-height: 1.5; }
+}
+.ft-list-empty { color: #cbd5e1; font-size: 13px; }
+
+.ft-list-actions-cell {
+  white-space: nowrap;
+  display: flex; gap: 4px; align-items: center;
+}
+
+.ft-list-empty-state {
+  text-align: center; padding: 60px 20px; color: #94a3b8;
+  mat-icon { font-size: 48px; width: 48px; height: 48px; display: block; margin: 0 auto 12px; }
+  p { font-size: 14px; }
+}
+
+// ── Card style picker (zoom bar) ──────────────────────────────────────────────
+.ft-style-label {
+  font-size: 11px; font-weight: 700; color: #64748b;
+  text-transform: uppercase; letter-spacing: 0.5px; margin-right: 4px;
+}
+.ft-card-style-picker {
+  display: flex; gap: 2px;
+  background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 6px; padding: 2px;
+}
+.ft-csp-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; border: none; border-radius: 4px;
+  background: transparent; cursor: pointer; color: #94a3b8;
+  transition: all 0.15s ease;
+  mat-icon { font-size: 15px; width: 15px; height: 15px; }
+  &:hover { background: white; color: var(--snr-primary); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+  &.active {
+    background: var(--snr-primary); color: white;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    mat-icon { color: white; }
+  }
+}
+
+// ── Card style variants ───────────────────────────────────────────────────────
+
+// COMPACT — just name + gen badge, tiny footprint
+.ft-card.ft-card-s-compact {
+  width: 150px !important;
+
+  .ft-card-main { padding: 6px 8px 4px; gap: 7px; }
+  .ft-avatar {
+    width: 30px; height: 30px;
+    mat-icon { font-size: 18px; width: 18px; height: 18px; }
+  }
+  .ft-card-name { font-size: 11px; }
+  .ft-gen-badge { font-size: 8px; padding: 1px 4px; }
+  .ft-card-actions { padding: 3px 4px 4px; gap: 2px; }
+  .ft-action-btn { width: 22px; height: 22px; mat-icon { font-size: 11px; width: 11px; height: 11px; } }
+}
+
+// DETAILED — wider, shows notes + custom fields
+.ft-card.ft-card-s-detailed {
+  width: 240px !important;
+
+  .ft-card-main { padding: 10px 12px 6px; gap: 12px; }
+  .ft-avatar { width: 48px; height: 48px; mat-icon { font-size: 32px; } }
+  .ft-card-name { font-size: 13px; }
+  .ft-card-meta { font-size: 11px; }
+}
+
+// PHOTO — larger avatar as focal point
+.ft-card.ft-card-s-photo {
+  width: 220px !important;
+
+  .ft-card-main { padding: 10px 12px 6px; gap: 12px; }
+  .ft-avatar {
+    width: 60px; height: 60px; flex-shrink: 0;
+    mat-icon { font-size: 42px; width: 42px; height: 42px; color: #cbd5e1; }
+    img { width: 100%; height: 100%; }
+  }
+  .ft-card-name { font-size: 14px; font-weight: 800; }
+  .ft-card-meta { font-size: 11px; }
 }

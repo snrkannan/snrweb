@@ -35,6 +35,13 @@ export class FamilyTreeComponent implements OnInit, OnDestroy {
   showCrossConn  = false;
   showBulkEdit   = false;
   showLayoutPanel = false;
+
+  // view mode
+  viewMode: 'canvas' | 'list' = 'canvas';
+  cardStyle: 'compact' | 'standard' | 'detailed' | 'photo' = 'standard';
+
+  // list view sort
+  listSort: { col: string; dir: 1 | -1 } = { col: 'name', dir: 1 };
   editingMember: FamilyMember | null = null;
   quickAddContext: { member: FamilyMember; rel: RelationshipType } | null = null;
 
@@ -100,6 +107,40 @@ export class FamilyTreeComponent implements OnInit, OnDestroy {
   // ── Helpers ────────────────────────────────────────────────────────────────
 
   get activeGroup(): FamilyGroup | undefined { return this.svc.getActiveGroup(); }
+
+  /** Members currently shown in the list view — sorted and optionally filtered. */
+  get sortedListMembers(): FamilyMember[] {
+    const source = this.searchQuery
+      ? this.tree.members.filter(m => m.name?.toLowerCase().includes(this.searchQuery.toLowerCase()))
+      : [...this.tree.members];
+    const { col, dir } = this.listSort;
+    return source.sort((a: any, b: any) => {
+      let av = a[col] ?? '';
+      let bv = b[col] ?? '';
+      if (col === 'group') { av = this.getGroup(a.groupId)?.name ?? ''; bv = this.getGroup(b.groupId)?.name ?? ''; }
+      if (col === 'spouse') { av = this.getMember(a.spouseId)?.name ?? ''; bv = this.getMember(b.spouseId)?.name ?? ''; }
+      if (col === 'parents') { av = a.parentIds?.length ?? 0; bv = b.parentIds?.length ?? 0; }
+      if (col === 'children') { av = a.childIds?.length ?? 0; bv = b.childIds?.length ?? 0; }
+      if (typeof av === 'string') return av.localeCompare(bv) * dir;
+      return (av - bv) * dir;
+    });
+  }
+
+  setListSort(col: string) {
+    if (this.listSort.col === col) {
+      this.listSort.dir = this.listSort.dir === 1 ? -1 : 1;
+    } else {
+      this.listSort = { col, dir: 1 };
+    }
+  }
+
+  jumpToCanvas(m: FamilyMember) {
+    this.viewMode = 'canvas';
+    // Switch to the member's group first
+    this.svc.setActiveGroup(m.groupId);
+    // Small delay so canvas renders, then highlight
+    setTimeout(() => this.highlightMember(m.id), 100);
+  }
 
   get activeMembers(): FamilyMember[] {
     return this.tree.members.filter(m => m.groupId === this.tree.activeGroupId);
