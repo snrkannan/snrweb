@@ -1,6 +1,6 @@
 {
   "buildCommand": "npm run build",
-  "outputDirectory": "docs",
+  "outputDirectory": "dist/web",
   "framework": null,
   "rewrites": [
     {
