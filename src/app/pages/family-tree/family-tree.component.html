@@ -149,7 +149,8 @@
   </div>
 
   <!-- ── Canvas ─────────────────────────────────────────────────────────────── -->
-  <div class="ft-canvas-wrap" (mousemove)="onDragMove($event)" (mouseup)="onDragEnd()" (wheel)="onWheel($event)">
+  <div class="ft-canvas-wrap" (mousemove)="onDragMove($event)" (mouseup)="onDragEnd()" (wheel)="onWheel($event)"
+       (click)="clearLinkSelection()">
     <div class="ft-canvas" #treeCanvas
          [style.width.px]="canvasWidth" [style.height.px]="canvasHeight"
          [style.transform]="canvasTranslate">
@@ -160,15 +161,28 @@
           <marker id="arrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
             <path d="M0,0 L0,6 L6,3 z" fill="#94a3b8"/>
           </marker>
+          <marker id="arrow-highlight" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
+            <path d="M0,0 L0,7 L7,3.5 z" fill="#f59e0b"/>
+          </marker>
         </defs>
-        <g *ngFor="let link of tree.links">
-          <path [attr.d]="linkPath(link)"
-                [class.ft-link-spouse]="isSpouseLink(link)"
-                [class.ft-link-child]="!isSpouseLink(link)"
-                [class.ft-link-cross]="isCrossGroupLink(link)"
-                fill="none" marker-end="url(#arrow)"/>
-          <text [attr.x]="linkLabelPos(link).x" [attr.y]="linkLabelPos(link).y"
-                class="ft-link-label">{{ link.type }}</text>
+        <g *ngFor="let p of svgPaths"
+           class="ft-link-group"
+           [class.ft-link-group-selected]="selectedPathKey === p.pathKey"
+           (click)="selectLink(p, $event)">
+          <!-- Wider transparent hit area for easy clicking -->
+          <path [attr.d]="p.d" fill="none" stroke="transparent" stroke-width="14" style="cursor:pointer"/>
+          <!-- Visible path -->
+          <path [attr.d]="p.d"
+                [class.ft-link-spouse]="p.isSpouse"
+                [class.ft-link-child]="!p.isSpouse"
+                [class.ft-link-cross]="p.isCross"
+                [class.ft-link-selected]="selectedPathKey === p.pathKey"
+                [attr.stroke]="selectedPathKey === p.pathKey ? '#f59e0b' : p.color"
+                fill="none"
+                style="pointer-events:none"
+                [attr.marker-end]="p.hasArrow ? (selectedPathKey === p.pathKey ? 'url(#arrow-highlight)' : 'url(#arrow)') : null"/>
+          <text *ngIf="p.label"
+                class="ft-link-label">{{ p.label }}</text>
         </g>
       </svg>
 
@@ -193,6 +207,7 @@
            [class.ft-card-s-photo]="cardStyle==='photo'"
            [class.ft-card-selected]="selectedMember?.id === m.id"
            [class.ft-card-multi-selected]="selectedMembers.has(m.id)"
+           [class.ft-card-link-highlight]="highlightedMemberIds.has(m.id)"
            [class.ft-card-male]="m.gender==='male'"
            [class.ft-card-female]="m.gender==='female'"
            [class.ft-card-other]="m.gender==='other'"
@@ -200,6 +215,7 @@
            [style.left.px]="m.x" [style.top.px]="m.y"
            [style.--group-color]="groupColor(m.groupId)"
            (click)="selectMember(m)"
+           (dblclick)="$event.stopPropagation(); openEdit(m)"
            (mousedown)="onDragStart($event, m.id)">
 
         <!-- Multi-select checkbox -->
@@ -267,7 +283,10 @@
 
     <div class="ft-list-header">
       <span class="ft-list-count">{{ sortedListMembers.length }} member{{ sortedListMembers.length !== 1 ? 's' : '' }}</span>
-      <span class="ft-list-hint"><mat-icon>info</mat-icon> Click a column header to sort. Click <mat-icon style="font-size:14px;vertical-align:middle">hub</mat-icon> to jump to the canvas.</span>
+      <span class="ft-list-hint">
+        <mat-icon>info</mat-icon>
+        Click a row to highlight connected members. Click column headers to sort. Click <mat-icon style="font-size:14px;vertical-align:middle">hub</mat-icon> to jump to the canvas.
+      </span>
     </div>
 
     <div class="ft-list-wrap">
@@ -306,7 +325,10 @@
           <tr *ngFor="let m of sortedListMembers" class="ft-list-row"
               [class.ft-list-row-male]="m.gender==='male'"
               [class.ft-list-row-female]="m.gender==='female'"
-              [class.ft-list-row-other]="m.gender==='other'">
+              [class.ft-list-row-other]="m.gender==='other'"
+              [class.ft-list-row-selected]="selectedListMemberId === m.id"
+              [class.ft-list-row-connected]="listHighlightedIds.has(m.id)"
+              (click)="selectListRow(m, $event)">
 
             <!-- Avatar -->
             <td class="ft-list-avatar-cell">
@@ -349,14 +371,20 @@
 
             <!-- Spouse -->
             <td class="ft-list-rel">
-              <span *ngIf="getMember(m.spouseId || '')">❤ {{ getMember(m.spouseId || '')?.name }}</span>
+              <span *ngIf="getMember(m.spouseId || '')"
+                    [class.ft-list-rel-active]="selectedListMemberId === (m.spouseId || '') || selectedListMemberId === m.id">
+                ❤ {{ getMember(m.spouseId || '')?.name }}
+              </span>
               <span *ngIf="!getMember(m.spouseId || '')" class="ft-list-empty">—</span>
             </td>
 
             <!-- Parents -->
             <td class="ft-list-rel">
               <div *ngFor="let pid of m.parentIds">
-                <span *ngIf="getMember(pid)">{{ getMember(pid)?.name }}</span>
+                <span *ngIf="getMember(pid)"
+                      [class.ft-list-rel-active]="selectedListMemberId === pid || selectedListMemberId === m.id">
+                  {{ getMember(pid)?.name }}
+                </span>
               </div>
               <span *ngIf="!m.parentIds?.length" class="ft-list-empty">—</span>
             </td>
@@ -364,7 +392,10 @@
             <!-- Children -->
             <td class="ft-list-rel">
               <div *ngFor="let cid of m.childIds">
-                <span *ngIf="getMember(cid)">{{ getMember(cid)?.name }}</span>
+                <span *ngIf="getMember(cid)"
+                      [class.ft-list-rel-active]="selectedListMemberId === cid || selectedListMemberId === m.id">
+                  {{ getMember(cid)?.name }}
+                </span>
               </div>
               <span *ngIf="!m.childIds?.length" class="ft-list-empty">—</span>
             </td>
@@ -415,8 +446,14 @@
         <!-- Existing groups -->
         <div class="ft-group-list">
           <div class="ft-group-row" *ngFor="let g of tree.groups">
-            <span class="ft-group-color-dot" [style.background]="g.color"></span>
+
             <ng-container *ngIf="editingGroupId !== g.id">
+              <!-- Color swatch + picker -->
+              <label class="ft-group-color-swatch" [style.background]="g.color" title="Change colour">
+                <input type="color" [value]="g.color"
+                       (input)="changeGroupColor(g.id, $any($event.target).value)"
+                       class="ft-color-input">
+              </label>
               <span class="ft-group-row-name">{{ g.name }}</span>
               <small class="text-muted">{{ membersForGroup(g.id).length }} members</small>
               <div class="ft-group-row-actions">
@@ -424,22 +461,37 @@
                 <button class="btn-icon-sm ft-del-btn" (click)="deleteGroup(g)" [disabled]="tree.groups.length<=1" title="Delete"><mat-icon>delete</mat-icon></button>
               </div>
             </ng-container>
+
             <ng-container *ngIf="editingGroupId === g.id">
+              <!-- Color swatch visible while renaming too -->
+              <label class="ft-group-color-swatch" [style.background]="g.color" title="Change colour">
+                <input type="color" [value]="g.color"
+                       (input)="changeGroupColor(g.id, $any($event.target).value)"
+                       class="ft-color-input">
+              </label>
               <input class="ft-input ft-inline-input" [(ngModel)]="groupForm.name" (keydown.enter)="saveRenameGroup()">
               <button class="btn-primary btn-sm" (click)="saveRenameGroup()">Save</button>
               <button class="btn-outline btn-sm" (click)="editingGroupId=''">Cancel</button>
             </ng-container>
+
           </div>
         </div>
 
         <!-- Create new group -->
         <div class="ft-rel-divider mt-3"><span>New Group</span></div>
-        <div class="ft-form-row-2">
-          <div>
-            <label>Group Name</label>
-            <input class="ft-input" [(ngModel)]="groupForm.name" placeholder="e.g. Patel Family">
-          </div>
-          <div class="d-flex align-items-end">
+        <div class="ft-form-row">
+          <label>Group Name</label>
+          <div class="ft-new-group-row">
+            <input class="ft-input" [(ngModel)]="groupForm.name" placeholder="e.g. Patel Family" style="flex:1">
+            <!-- colour for new group: show the current auto-picked swatch + picker -->
+            <label class="ft-group-color-swatch ft-group-color-swatch-lg" [style.background]="groupForm.color" title="Pick group colour">
+              <input type="color" [value]="groupForm.color"
+                     (input)="groupForm.color = $any($event.target).value"
+                     class="ft-color-input">
+            </label>
+            <button class="btn-icon-sm" (click)="groupForm.color = randomGroupColor()" title="Random colour">
+              <mat-icon>shuffle</mat-icon>
+            </button>
             <button class="btn-primary" (click)="createGroup()"><mat-icon>add</mat-icon> Create</button>
           </div>
         </div>
@@ -827,14 +879,24 @@
           Check a field to apply it to all selected members. Unchecked fields are left unchanged.
         </p>
 
-        <!-- Group -->
+        <!-- Family (Group) -->
         <div class="ft-bulk-row">
           <label class="ft-bulk-check">
-            <input type="checkbox" [(ngModel)]="bulkForm.applyGroup"> Group
+            <input type="checkbox" [(ngModel)]="bulkForm.applyGroup">
+            <mat-icon style="font-size:15px;width:15px;height:15px;vertical-align:middle;margin-right:2px">group</mat-icon>
+            Family
           </label>
-          <select class="ft-input" [(ngModel)]="bulkForm.groupId" [disabled]="!bulkForm.applyGroup">
-            <option *ngFor="let g of tree.groups" [value]="g.id">{{ g.name }}</option>
-          </select>
+          <div class="ft-bulk-family-select" [class.ft-bulk-family-active]="bulkForm.applyGroup">
+            <span class="ft-bulk-family-dot"
+                  [style.background]="bulkForm.applyGroup ? groupColor(bulkForm.groupId) : '#e2e8f0'">
+            </span>
+            <select class="ft-input" [(ngModel)]="bulkForm.groupId"
+                    [disabled]="!bulkForm.applyGroup"
+                    [style.border-left-color]="bulkForm.applyGroup ? groupColor(bulkForm.groupId) : '#e2e8f0'"
+                    style="border-left-width:3px;border-left-style:solid;padding-left:8px;">
+              <option *ngFor="let g of tree.groups" [value]="g.id">{{ g.name }}</option>
+            </select>
+          </div>
         </div>
 
         <!-- Generation -->

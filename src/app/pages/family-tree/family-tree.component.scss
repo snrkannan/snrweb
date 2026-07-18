@@ -87,9 +87,33 @@
   stroke: #f59e0b !important; stroke-width: 2 !important; stroke-dasharray: 8 4 !important;
 }
 
+// ── Clickable link group ────────────────────────────────────────────────────
+.ft-link-group {
+  pointer-events: stroke; // group captures clicks on all child paths
+  cursor: pointer;
+}
+
+// ── Selected / highlighted line ────────────────────────────────────────────
+.ft-link-selected {
+  stroke-width: 3.5 !important;
+  opacity: 1 !important;
+  stroke-dasharray: none !important;
+  filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.7));
+  transition: stroke 0.2s ease, stroke-width 0.2s ease;
+}
+
+// ── Card highlighted because it is connected to the selected line ──────────
+.ft-card-link-highlight {
+  border-color: #f59e0b !important;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.35), 0 4px 20px rgba(245, 158, 11, 0.2) !important;
+  background: linear-gradient(135deg, #fffbeb 0%, #ffffff 100%) !important;
+  transform: translateY(-2px);
+  z-index: 5;
+  transition: box-shadow 0.25s ease, border-color 0.25s ease, transform 0.2s ease !important;
+}
+
 // ── Inactive card (other group) ──────────────────────────────────────────
 .ft-card {
-  border-top-color: var(--group-color, #e2e8f0) !important;
   &.ft-card-inactive { opacity: 0.55; }
 }
 
@@ -105,6 +129,25 @@
 .ft-del-btn:not([disabled]):hover { mat-icon { color: #dc3545 !important; } }
 .ft-inline-input { flex: 1; }
 .btn-sm { padding: 5px 12px !important; font-size: 12px !important; }
+
+// ── Group color swatch (opens native color picker) ───────────────────────────
+.ft-group-color-swatch {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; border-radius: 50%;
+  border: 2px solid rgba(0,0,0,0.18); cursor: pointer; flex-shrink: 0;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  position: relative; overflow: hidden;
+  &:hover { transform: scale(1.15); box-shadow: 0 2px 8px rgba(0,0,0,0.22); }
+  &.ft-group-color-swatch-lg { width: 34px; height: 34px; border-radius: 8px; }
+}
+.ft-color-input {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  opacity: 0; cursor: pointer; padding: 0; border: none;
+}
+// ── New group creation row ────────────────────────────────────────────────────
+.ft-new-group-row {
+  display: flex; align-items: center; gap: 8px;
+}
 
 // ── Cross-connect hint ────────────────────────────────────────────────────────
 .ft-cross-conn-hint {
@@ -133,13 +176,15 @@
 
 // ── SVG lines ─────────────────────────────────────────────────────────────────
 .ft-svg {
-  position: absolute; top: 0; left: 0; pointer-events: none; overflow: visible;
+  position: absolute; top: 0; left: 0; pointer-events: all; overflow: visible;
 }
 .ft-link-spouse {
-  stroke: #ec4899; stroke-width: 2; stroke-dasharray: 6 3;
+  /* stroke color driven by [attr.stroke] — group color */
+  stroke-width: 2; stroke-dasharray: 6 3; opacity: 0.85;
 }
 .ft-link-child {
-  stroke: #94a3b8; stroke-width: 1.5; stroke-linecap: round;
+  /* stroke color driven by [attr.stroke] — group color */
+  stroke-width: 1.5; stroke-linecap: round; opacity: 0.7;
 }
 .ft-link-label {
   font-size: 9px; fill: #94a3b8; font-family: 'Roboto', sans-serif;
@@ -149,7 +194,7 @@
 // ── Member card ───────────────────────────────────────────────────────────────
 .ft-card {
   position: absolute; width: 200px; border-radius: 12px;
-  background: white; border: 2px solid #e2e8f0;
+  background: white; border: 1px solid #000;
   box-shadow: 0 2px 8px rgba(0,0,0,0.08);
   cursor: grab; user-select: none;
   transition: box-shadow 0.2s ease, border-color 0.2s ease;
@@ -159,9 +204,9 @@
   &:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.14); }
 
   &.ft-card-selected { border-color: var(--snr-primary); box-shadow: 0 0 0 3px rgba(var(--snr-primary-rgb),0.25); }
-  &.ft-card-male    { border-top: 3px solid #3b82f6; }
-  &.ft-card-female  { border-top: 3px solid #ec4899; }
-  &.ft-card-other   { border-top: 3px solid #8b5cf6; }
+  &.ft-card-male    { border: 1px solid #1d4ed8; }   // strong blue
+  &.ft-card-female  { border: 1px solid #db2777; }   // strong pink
+  &.ft-card-other   { border: 1px solid #7c3aed; }   // strong purple
 }
 
 // ── Horizontal card layout ────────────────────────────────────────────────────
@@ -435,6 +480,25 @@
   .ft-input:disabled { background: #f8fafc; color: #94a3b8; cursor: not-allowed; }
 }
 
+// ── Bulk edit — family picker ─────────────────────────────────────────────────
+.ft-bulk-family-select {
+  display: flex; align-items: center; gap: 8px; flex: 1;
+  padding: 4px 8px; border-radius: 8px;
+  background: #f8fafc; border: 1px solid #e2e8f0;
+  transition: background 0.2s ease, border-color 0.2s ease;
+  select { flex: 1; margin-bottom: 0; border-left: 3px solid #e2e8f0; transition: border-color 0.2s ease; }
+  &.ft-bulk-family-active {
+    background: white;
+    border-color: var(--snr-primary);
+    box-shadow: 0 0 0 2px var(--snr-primary-light);
+  }
+}
+.ft-bulk-family-dot {
+  width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0;
+  border: 2px solid rgba(0,0,0,0.12);
+  transition: background 0.2s ease;
+}
+
 // ── Layout alignment panel ─────────────────────────────────────────────────────
 .ft-layout-panel {
   background: white; border-bottom: 1px solid #e5e7eb;
@@ -554,14 +618,53 @@
 }
 
 .ft-list-row {
-  transition: background 0.12s ease;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
   border-left: 3px solid transparent;
+  cursor: pointer;
 
   &:hover { background: #f8fafc; }
   &.ft-list-row-male    { border-left-color: #3b82f6; }
   &.ft-list-row-female  { border-left-color: #ec4899; }
   &.ft-list-row-other   { border-left-color: #8b5cf6; }
   &:last-child td       { border-bottom: none; }
+
+  // ── Selected row — vivid teal/primary accent ────────────────────────────────
+  &.ft-list-row-selected {
+    background: linear-gradient(90deg, rgba(var(--snr-primary-rgb), 0.08) 0%, rgba(var(--snr-primary-rgb), 0.03) 100%) !important;
+    border-left-color: var(--snr-primary) !important;
+    border-left-width: 4px;
+    box-shadow: inset 0 0 0 1px rgba(var(--snr-primary-rgb), 0.12);
+
+    td { color: #1e293b; }
+    .ft-list-name { color: var(--snr-primary); }
+  }
+
+  // ── Connected rows — warm amber glow ────────────────────────────────────────
+  &.ft-list-row-connected {
+    background: linear-gradient(90deg, rgba(245, 158, 11, 0.09) 0%, rgba(245, 158, 11, 0.03) 100%) !important;
+    border-left-color: #f59e0b !important;
+    border-left-width: 4px;
+    animation: connectedPulse 0.35s ease;
+
+    .ft-list-name { color: #92400e; font-weight: 700; }
+  }
+}
+
+@keyframes connectedPulse {
+  0%   { background: rgba(245, 158, 11, 0.22); }
+  100% { background: rgba(245, 158, 11, 0.09); }
+}
+
+// ── Relationship name chip (active when that row is selected or related) ──────
+.ft-list-rel-active {
+  display: inline-block;
+  background: rgba(245, 158, 11, 0.15);
+  color: #92400e;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 10px;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  transition: background 0.2s ease;
 }
 
 .ft-list-avatar-cell { width: 44px; }

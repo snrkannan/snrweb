@@ -1,64 +1,43 @@
-mat-sidenav-container {
+// Layout container — all surfaces white, ADO light theme
+.snr-layout-container {
   position: fixed;
-  top: 48px;
-  left: 0;
-  right: 0;
-  bottom: 40px;
-  width: 100vw;
-  height: auto;
-  background-color: #f8f9fa;
+  inset: 0;
   display: flex !important;
   flex-direction: row !important;
-  margin: 0 !important;
-  padding: 0 !important;
+  background: #ffffff;
 }
 
-mat-sidenav {
-  width: 280px !important;
+.snr-sidenav-drawer {
+  width: var(--snr-sidebar-w, 220px) !important;
   flex-shrink: 0 !important;
   height: 100% !important;
-  overflow-y: auto !important;
   border-right: none !important;
-}
-
-.content {
-  padding: 16px !important;
-  background: linear-gradient(to bottom, #f5f7fa 0%, #ffffff 50%);
-  overflow-y: auto;
-  flex: 1;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-
-  @media (max-width: 768px) {
-    padding: 12px !important;
-  }
+  // ADO: sidenav is separated by a clean 1px border (no shadow)
+  box-shadow: none !important;
+  overflow: hidden !important;
 }
 
 mat-sidenav-content {
   display: flex !important;
   flex-direction: column !important;
   flex: 1 !important;
-  width: 100% !important;
   height: 100% !important;
   overflow: hidden !important;
+  background: #ffffff;
+  min-width: 0 !important;
 }
 
-app-header {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 1000;
-  width: 100%;
-}
+app-header { flex-shrink: 0; }
+app-footer  { flex-shrink: 0; }
 
-app-footer {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 1000;
-  width: 100%;
+.snr-page-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: #ffffff;
+
+  // Thin scrollbar — ADO style
+  &::-webkit-scrollbar { width: 6px; }
+  &::-webkit-scrollbar-thumb { background: #c8c6c4; border-radius: 3px; }
+  &::-webkit-scrollbar-track { background: transparent; }
 }
-  

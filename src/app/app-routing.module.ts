@@ -8,6 +8,7 @@ import { DateConverterComponent } from './pages/date-converter/date-converter.co
 import { CursiveWriteComponent } from './components/cursive-write/cursive-write.component';
 import { SudokuComponent } from './components/sudoku/sudoku.component';
 import { FamilyTreeComponent } from './pages/family-tree/family-tree.component';
+import { KidsPlannerComponent } from './pages/kids-planner/kids-planner.component';
 
 const routes: Routes = [
   { path: 'about', component: AboutComponent },
@@ -19,6 +20,7 @@ const routes: Routes = [
   { path: 'sudoku', component: SudokuComponent },
   { path: 'family-tree', component: FamilyTreeComponent },
   { path: 'date-Converter', component: DateConverterComponent },  // Added
+  { path: 'kids-planner', component: KidsPlannerComponent },
     
   { path: '', redirectTo: 'about', pathMatch: 'full' }
 ];

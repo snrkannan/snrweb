@@ -1,81 +1,153 @@
-:host {
-  display: block;
+// Azure DevOps light theme — white sidebar with dark text
+:host { display: block; height: 100%; }
+
+.snr-sidebar {
   height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  border-right: 1px solid #edebe9;   // ADO neutral-lighter-alt border
+  overflow: hidden;
+  width: var(--snr-sidebar-w);
 }
 
-.snr-sidenav {
-  background-color: var(--snr-primary);
-  transition: background-color 0.3s ease;
+// ── Brand ─────────────────────────────────────────────────────────────────────
+.snr-sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  height: var(--snr-header-h);
+  border-bottom: 1px solid #edebe9;
+  flex-shrink: 0;
 }
 
-.snr-brand-icon {
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
+.snr-sidebar-logo {
+  width: 26px; height: 26px;
+  border-radius: 3px;
+  background: var(--snr-primary);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.3s ease;
+  mat-icon { font-size: 15px; width: 15px; height: 15px; color: white; }
 }
 
-.snr-border-bottom { border-bottom: 1px solid rgba(255,255,255,0.15); }
-.snr-border-top    { border-top:    1px solid rgba(255,255,255,0.15); }
-
-.snr-muted  { color: rgba(255,255,255,0.55) !important; }
-
-.snr-label {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 1.2px;
-  text-transform: uppercase;
-  color: rgba(255,255,255,0.4);
+.snr-sidebar-app-name {
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 14px; font-weight: 600;
+  color: #1b1a19;
+  letter-spacing: 0;
 }
 
-// Nav items
+.snr-sidebar-tagline { display: none; }
+
+// ── Nav ───────────────────────────────────────────────────────────────────────
+.snr-sidebar-nav {
+  flex: 1; overflow-y: auto; overflow-x: hidden;
+  padding: 6px 0 12px;
+
+  &::-webkit-scrollbar { width: 4px; }
+  &::-webkit-scrollbar-thumb { background: #edebe9; border-radius: 2px; }
+}
+
+// Section headers — ADO style: small caps, muted color
+.snr-nav-section {
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 10px; font-weight: 600; letter-spacing: 0.8px;
+  text-transform: uppercase; color: #a19f9d;   // ADO neutral-tertiary
+  padding: 14px 16px 4px;
+}
+
+// Nav items — ADO style: flat rows, blue left-border on active
 .snr-nav-item {
-  color: rgba(255,255,255,0.8) !important;
-  transition: background 0.15s ease;
-
-  mat-icon { color: rgba(255,255,255,0.6); }
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 12px; margin: 1px 4px;
+  border-radius: 2px;
+  text-decoration: none !important;
+  color: #323130 !important;     // ADO neutral-primary text
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 13px; font-weight: 400; cursor: pointer;
+  transition: background 0.08s ease, color 0.08s ease;
+  position: relative;
 
   &:hover {
-    background: rgba(255,255,255,0.12) !important;
-    color: #fff !important;
-    mat-icon { color: #fff; }
+    background: #f3f2f1;         // ADO neutral-lighter
+    color: #1b1a19 !important;
+    .snr-nav-icon mat-icon { color: #1b1a19; }
   }
 
-  &.snr-active {
-    background: rgba(255,255,255,0.2) !important;
-    color: #fff !important;
+  &.snr-nav-active {
+    background: var(--snr-primary-light);
+    color: var(--snr-primary) !important;
     font-weight: 600;
-    box-shadow: inset 3px 0 0 #fff;
-    mat-icon { color: #fff; }
+
+    // ADO-style blue left accent bar
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 3px;
+      background: var(--snr-primary);
+      border-radius: 0 2px 2px 0;
+    }
+
+    .snr-nav-icon mat-icon { color: var(--snr-primary); }
+  }
+
+  &.snr-nav-sub {
+    padding: 6px 12px;
+    font-size: 12.5px;
+    margin-left: 8px;
   }
 }
 
-// Expansion panels — strip Material chrome
-.snr-panel {
+.snr-nav-icon {
+  display: flex; align-items: center; width: 18px; flex-shrink: 0;
+  mat-icon { font-size: 16px; width: 16px; height: 16px; color: #605e5c; transition: color 0.1s; }
+}
+.snr-nav-label { flex: 1; line-height: 1; }
+
+// ── Expansion panels ──────────────────────────────────────────────────────────
+.snr-exp-panel {
   background: transparent !important;
   box-shadow: none !important;
   border-radius: 0 !important;
+  margin: 0 !important;
+  ::ng-deep .mat-expansion-panel-body { padding: 0 !important; background: transparent !important; }
+}
 
-  ::ng-deep .mat-expansion-panel-body {
-    padding: 0 !important;
-    background: transparent !important;
+.snr-exp-header {
+  height: 34px !important; min-height: 34px !important;
+  background: transparent !important;
+  padding: 0 12px 0 6px !important;
+  margin: 1px 4px !important;
+  border-radius: 2px !important;
+  transition: background 0.08s ease !important;
+
+  &:hover { background: #f3f2f1 !important; }
+
+  ::ng-deep mat-panel-title {
+    color: #323130 !important;
+    font-family: 'Segoe UI', sans-serif !important;
+    font-size: 13px !important; font-weight: 400 !important;
+  }
+  ::ng-deep .mat-expansion-indicator::after {
+    color: #605e5c !important;
+    border-width: 0 1.5px 1.5px 0 !important;
   }
 }
 
-.snr-panel-header {
-  height: 40px !important;
-  min-height: 40px !important;
-  background: transparent !important;
-  color: rgba(255,255,255,0.8) !important;
+.snr-exp-body { padding: 1px 0 2px 8px; }
 
-  mat-icon { color: rgba(255,255,255,0.6) !important; }
-
-  ::ng-deep mat-panel-title { color: rgba(255,255,255,0.8) !important; }
-
-  ::ng-deep .mat-expansion-indicator::after {
-    color: rgba(255,255,255,0.5) !important;
-  }
-
-  &:hover {
-    background: rgba(255,255,255,0.12) !important;
-    color: #fff !important;
-  }
+// ── Footer strip ──────────────────────────────────────────────────────────────
+.snr-sidebar-footer {
+  display: flex; align-items: center; gap: 6px;
+  padding: 0 14px;
+  height: var(--snr-footer-h);
+  border-top: 1px solid #edebe9;
+  color: #a19f9d;
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 10px; font-weight: 500;
+  flex-shrink: 0;
+  mat-icon { font-size: 11px; width: 11px; height: 11px; }
 }

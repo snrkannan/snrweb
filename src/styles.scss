@@ -1,72 +1,102 @@
 @import "assets/fonts/generated-fonts";
 @import url('https://fonts.googleapis.com/css2?family=Alex+Brush&family=Dancing+Script&family=Great+Vibes&family=Satisfy&display=swap');
 
-* { box-sizing: border-box; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body {
   height: 100%;
-  margin: 0;
-  padding: 0;
-  font-family: 'Roboto', 'Helvetica Neue', sans-serif;
+  // Azure DevOps uses Segoe UI as its system font
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 14px;
+  line-height: 20px;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  background: #ffffff;   // ADO white content background
+  color: #1b1a19;        // ADO near-black text (Fluent UI neutral-primary-alt)
 }
 
 // ── Theme variables (overridden by ThemeService at runtime) ──────────────────
 :root {
-  --snr-primary:       #6f42c1;
-  --snr-primary-light: rgba(111, 66, 193, 0.12);
-  --snr-primary-dark:  #5a32a3;
-  --snr-primary-rgb:   111, 66, 193;
+  // Default = Azure DevOps blue
+  --snr-primary:            #0078d4;
+  --snr-primary-light:      rgba(0, 120, 212, 0.10);
+  --snr-primary-light-hover:rgba(0, 120, 212, 0.16);
+  --snr-primary-dark:       #106ebe;
+  --snr-primary-rgb:        0, 120, 212;
+
+  // ADO neutral surface colors
+  --snr-surface:            #ffffff;
+  --snr-surface-alt:        #f8f8f8;
+  --snr-border:             #edebe9;
+  --snr-text:               #1b1a19;
+  --snr-text-secondary:     #605e5c;
+  --snr-text-disabled:      #a19f9d;
+
+  // Layout sizing tokens (ADO-aligned)
+  --snr-header-h:  48px;
+  --snr-footer-h:  36px;
+  --snr-sidebar-w: 220px;
 }
 
 // ── Shared utility classes used across all pages ─────────────────────────────
+// ── Shared utility classes used across all pages ─────────────────────────────
+// ADO-style card header: flat blue bar, Segoe UI 14px semibold
 .snr-card-header {
   background-color: var(--snr-primary) !important;
   color: white !important;
-  padding: 10px 16px !important;
-  border-radius: 8px 8px 0 0;
+  padding: 8px 16px !important;
+  border-radius: 0;
   margin: -16px -16px 12px -16px !important;
 
   mat-card-title, .card-title {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     margin: 0 !important;
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 600;
     color: white !important;
+    font-family: 'Segoe UI', sans-serif;
 
-    mat-icon { font-size: 20px; width: 20px; height: 20px; }
+    mat-icon { font-size: 18px; width: 18px; height: 18px; }
   }
 }
 
+// ADO primary button: flat, no border-radius (2px), Segoe UI
 .snr-btn-primary {
   background-color: var(--snr-primary) !important;
   color: white !important;
   border: none;
-  border-radius: 6px;
-  padding: 8px 16px;
+  border-radius: 2px;
+  padding: 6px 16px;
+  font-size: 14px;
+  font-family: 'Segoe UI', sans-serif;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+  transition: background-color 0.1s ease;
 
   &:hover {
     background-color: var(--snr-primary-dark) !important;
-    box-shadow: 0 3px 8px rgba(var(--snr-primary-rgb), 0.35);
   }
 }
 
+// ADO info box: subtle background with left accent border
 .snr-result-box {
-  margin-top: 16px;
-  padding: 14px 16px;
+  margin-top: 12px;
+  padding: 12px 16px;
   background: var(--snr-primary-light);
-  border: 1px solid rgba(var(--snr-primary-rgb), 0.25);
-  border-radius: 8px;
+  border: 1px solid var(--snr-border);
+  border-left: 3px solid var(--snr-primary);
+  border-radius: 2px;
+  font-size: 14px;
+  color: var(--snr-text);
 }
 
-.snr-text-primary { color: var(--snr-primary) !important; }
-.snr-border-primary { border-color: var(--snr-primary) !important; }
-.snr-bg-primary-light { background-color: var(--snr-primary-light) !important; }
+.snr-text-primary    { color: var(--snr-primary) !important; }
+.snr-text-secondary  { color: var(--snr-text-secondary) !important; }
+.snr-border-primary  { border-color: var(--snr-primary) !important; }
+.snr-bg-primary-light{ background-color: var(--snr-primary-light) !important; }
 
 // ── Cursive text (used by cursive-write) ─────────────────────────────────────
 .cursive-text {

@@ -2,9 +2,8 @@
   "name": "snrweb",
   "version": "0.0.0",
   "scripts": {
-    "prestart": "node generate-font-manifest.js",
     "start": "ng serve",
-    "build": "node generate-font-manifest.js && ng build",
+    "build": "ng build",
     "ng": "ng",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",

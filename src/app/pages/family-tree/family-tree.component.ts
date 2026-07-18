@@ -5,6 +5,21 @@ import { FamilyMember, FamilyTree, FamilyLink, FamilyGroup,
 import { FamilyTreeService } from './family-tree.service';
 import { FamilyTreePdfService } from './family-tree-pdf.service';
 
+/** One SVG path segment produced by the comb renderer. */
+interface SvgPath {
+  d: string;
+  isSpouse: boolean;
+  isCross: boolean;
+  hasArrow: boolean;
+  color: string;
+  label: string;
+  /** Unique key for this path (link id or synthetic key for comb branches). */
+  pathKey: string;
+  /** IDs of the two members this path visually connects. */
+  fromId: string;
+  toId: string;
+}
+
 @Component({
   selector: 'app-family-tree',
   templateUrl: './family-tree.component.html',
@@ -52,6 +67,40 @@ export class FamilyTreeComponent implements OnInit, OnDestroy {
   connectForm = { fromId: '', toId: '', type: 'child' as RelationshipType };
   relationshipTypes = RELATIONSHIP_TYPES;
 
+  // ── Line selection (canvas) ─────────────────────────────────────────────────
+  /** Key of the currently-clicked SVG path, or null. */
+  selectedPathKey: string | null = null;
+  /** IDs of members that should be highlighted because of the selected line. */
+  highlightedMemberIds: Set<string> = new Set();
+
+  // ── Row selection (list view) ────────────────────────────────────────────────
+  /** ID of the member whose list row was last clicked. */
+  selectedListMemberId: string | null = null;
+
+  /** The selected member + all directly-connected members (for list highlight). */
+  get listHighlightedIds(): Set<string> {
+    if (!this.selectedListMemberId) return new Set();
+    const m = this.getMember(this.selectedListMemberId);
+    if (!m) return new Set();
+    const ids = new Set<string>();
+    // spouse
+    if (m.spouseId) ids.add(m.spouseId);
+    // parents
+    (m.parentIds ?? []).forEach(id => ids.add(id));
+    // children
+    (m.childIds ?? []).forEach(id => ids.add(id));
+    // siblings
+    (m.siblingIds ?? []).forEach(id => ids.add(id));
+    return ids;
+  }
+
+  /** Selects a list row (toggle). */
+  selectListRow(m: FamilyMember, event: MouseEvent) {
+    // don't trigger when clicking action buttons
+    if ((event.target as HTMLElement).closest('.ft-list-actions-cell')) return;
+    this.selectedListMemberId = this.selectedListMemberId === m.id ? null : m.id;
+  }
+
   // multi-select
   multiSelectMode = false;
   selectedMembers = new Set<string>();
@@ -73,7 +122,7 @@ export class FamilyTreeComponent implements OnInit, OnDestroy {
   crossConnForm = { fromGroupId: '', fromId: '', toGroupId: '', toId: '', type: 'spouse' as RelationshipType };
 
   // group manager
-  groupForm = { name: '' };
+  groupForm = { name: '', color: '' };
   editingGroupId = '';
 
   // pdf
@@ -175,6 +224,27 @@ export class FamilyTreeComponent implements OnInit, OnDestroy {
     return g === 'male' ? '#3b82f6' : g === 'female' ? '#ec4899' : '#8b5cf6';
   }
 
+  /** Returns the group color for a link — drives the SVG stroke coloring. */
+  linkGroupColor(link: FamilyLink): string {
+    const from = this.getMember(link.fromId);
+    return from ? this.groupColor(from.groupId) : '#94a3b8';
+  }
+
+  /** Updates a group's accent color live. */
+  changeGroupColor(groupId: string, color: string) {
+    this.svc.changeGroupColor(groupId, color);
+  }
+
+  /** Returns a random vibrant color from an extended palette. */
+  randomGroupColor(): string {
+    const palette = [
+      '#6f42c1','#0d6efd','#198754','#0d9488','#fd7e14','#dc3545',
+      '#e91e63','#795548','#00897b','#3949ab','#f57c00','#c62828',
+      '#ad1457','#00838f','#558b2f','#6d4c41','#5e35b1','#1565c0'
+    ];
+    return palette[Math.floor(Math.random() * palette.length)];
+  }
+
   genBadgeColor(gen: number): string {
     const colors = ['#6f42c1','#0d6efd','#198754','#fd7e14','#dc3545','#0d9488'];
     return colors[Math.abs(gen) % colors.length];
@@ -187,19 +257,168 @@ export class FamilyTreeComponent implements OnInit, OnDestroy {
     const from = this.getMember(link.fromId);
     const to   = this.getMember(link.toId);
     if (!from || !to) return '';
-    const fw = 160, fh = 90;
-    const x1 = from.x + fw / 2, y1 = from.y + fh / 2;
-    const x2 = to.x   + fw / 2, y2 = to.y   + fh / 2;
-    if (link.type === 'spouse') return `M${x1},${y1} L${x2},${y2}`;
-    const my = (y1 + y2) / 2;
-    return `M${x1},${y1} C${x1},${my} ${x2},${my} ${x2},${y2}`;
+
+    const CW = 200, CH = 120;
+    const fromCx = from.x + CW / 2;
+    const fromCy = from.y + CH / 2;
+    const toCx   = to.x   + CW / 2;
+    const toCy   = to.y   + CH / 2;
+    const dx = toCx - fromCx;
+    const dy = toCy - fromCy;
+
+    // ── Spouse: smooth S-curve between side edges (handles height diff) ───────
+    if (link.type === 'spouse') {
+      const [x1, y1, x2, y2] = from.x <= to.x
+        ? [from.x + CW, fromCy, to.x, toCy]
+        : [from.x, fromCy, to.x + CW, toCy];
+      const mx = (x1 + x2) / 2;
+      // S-curve: first CP pulls horizontally from x1, second from x2
+      return `M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`;
+    }
+
+    // ── Parent-child: tension bezier from card edge to card edge ─────────────
+    let x1: number, y1: number, x2: number, y2: number;
+    let cpx1: number, cpy1: number, cpx2: number, cpy2: number;
+
+    // Choose exit/entry edges based on dominant axis
+    if (Math.abs(dy) >= Math.abs(dx)) {
+      if (dy >= 0) {
+        x1 = fromCx;  y1 = from.y + CH;   // bottom of parent
+        x2 = toCx;    y2 = to.y;           // top of child
+      } else {
+        x1 = fromCx;  y1 = from.y;         // top of parent
+        x2 = toCx;    y2 = to.y + CH;      // bottom of child
+      }
+      // Pull control points proportionally along Y (tension = half the gap)
+      const tension = Math.min(Math.abs(y2 - y1) * 0.45, 90);
+      const sign = dy >= 0 ? 1 : -1;
+      cpx1 = x1; cpy1 = y1 + sign * tension;
+      cpx2 = x2; cpy2 = y2 - sign * tension;
+    } else {
+      if (dx >= 0) {
+        x1 = from.x + CW;  y1 = fromCy;   // right of parent
+        x2 = to.x;          y2 = toCy;     // left of child
+      } else {
+        x1 = from.x;        y1 = fromCy;   // left of parent
+        x2 = to.x + CW;     y2 = toCy;     // right of child
+      }
+      const tension = Math.min(Math.abs(x2 - x1) * 0.45, 90);
+      const sign = dx >= 0 ? 1 : -1;
+      cpx1 = x1 + sign * tension; cpy1 = y1;
+      cpx2 = x2 - sign * tension; cpy2 = y2;
+    }
+
+    return `M${x1},${y1} C${cpx1},${cpy1} ${cpx2},${cpy2} ${x2},${y2}`;
   }
 
   linkLabelPos(link: FamilyLink): { x: number; y: number } {
     const from = this.getMember(link.fromId);
     const to   = this.getMember(link.toId);
     if (!from || !to) return { x: 0, y: 0 };
-    return { x: (from.x + to.x) / 2 + 80, y: (from.y + to.y) / 2 + 45 };
+    const CW = 200, CH = 120;
+    return {
+      x: (from.x + to.x) / 2 + CW / 2,
+      y: (from.y + to.y) / 2 + CH / 2
+    };
+  }
+
+  // ── Genealogy comb renderer ────────────────────────────────────────────────
+  //
+  // Instead of two separate lines (father→child, mother→child) we draw:
+  //   1. The spouse line   (unchanged)
+  //   2. A vertical TRUNK  from the midpoint of the spouse line down to a
+  //      junction row
+  //   3. A horizontal BAR  at the junction spanning all shared children
+  //   4. Vertical DROPS    from the bar down to each child's top edge
+  //
+  // Father→child and mother→child links that are absorbed into a comb are
+  // suppressed so they don't render on top of the comb.
+
+  get svgPaths(): SvgPath[] {
+    const CW = 200, CH = 120;
+    const paths: SvgPath[] = [];
+    const absorbedIds = new Set<string>();
+
+    // ── Step 1: parent-link lookup per child ──────────────────────────────────
+    const parentLinksOf = new Map<string, FamilyLink[]>();
+    for (const lnk of this.tree.links) {
+      if (lnk.type === 'spouse') continue;
+      const arr = parentLinksOf.get(lnk.toId) ?? [];
+      arr.push(lnk);
+      parentLinksOf.set(lnk.toId, arr);
+    }
+
+    // ── Step 2: spouse pairs — draw comb with smooth beziers ─────────────────
+    for (const sLink of this.tree.links.filter(l => l.type === 'spouse')) {
+      const p1 = this.getMember(sLink.fromId);
+      const p2 = this.getMember(sLink.toId);
+      if (!p1 || !p2) continue;
+
+      const sharedIds = p1.childIds.filter(id => p2.childIds.includes(id));
+      if (!sharedIds.length) continue;
+
+      const children = sharedIds.map(id => this.getMember(id)).filter(Boolean) as FamilyMember[];
+
+      // Midpoint of the spouse connector line (side-edge based)
+      const left  = p1.x <= p2.x ? p1 : p2;
+      const right = p1.x <= p2.x ? p2 : p1;
+      const sx1 = left.x + CW,  sy1 = left.y  + CH / 2;
+      const sx2 = right.x,       sy2 = right.y + CH / 2;
+      const midX = (sx1 + sx2) / 2;
+      const midY = (sy1 + sy2) / 2;
+
+      const color   = this.groupColor(p1.groupId);
+      const isCross = !!sLink.crossGroup;
+
+      // One smooth bezier per child: starts at couple midpoint, curves to child top
+      for (const child of children) {
+        const cx       = child.x + CW / 2;   // child top-center X
+        const childTop = child.y;             // child top Y
+
+        // Control points create a smooth "drain" shape:
+        //   CP1 = directly below midpoint (push down first)
+        //   CP2 = directly above the child top-center (arrive from above)
+        const dy      = childTop - midY;
+        const tension = Math.min(Math.abs(dy) * 0.45, 90);
+        const cp1x = midX,  cp1y = midY + tension;
+        const cp2x = cx,    cp2y = childTop - tension;
+
+        // The comb branch represents p1 (or p2) → child; use a synthetic key
+        const pathKey = `comb-${sLink.id}-${child.id}`;
+        paths.push({
+          d: `M${midX},${midY} C${cp1x},${cp1y} ${cp2x},${cp2y} ${cx},${childTop}`,
+          isSpouse: false, isCross, hasArrow: true, color, label: 'child',
+          pathKey,
+          fromId: p1.id,   // parent 1 (the "from" of the spouse link)
+          toId: child.id
+        });
+
+        // Absorb individual parent→child links for this couple
+        for (const pl of parentLinksOf.get(child.id) ?? []) {
+          if (pl.fromId === p1.id || pl.fromId === p2.id) {
+            absorbedIds.add(pl.id);
+          }
+        }
+      }
+    }
+
+    // ── Step 3: remaining links (single-parent, cross-group, etc.) ─────────────
+    for (const lnk of this.tree.links) {
+      if (absorbedIds.has(lnk.id)) continue;
+      paths.push({
+        d: this.linkPath(lnk),
+        isSpouse: lnk.type === 'spouse',
+        isCross:  !!lnk.crossGroup,
+        hasArrow: lnk.type !== 'spouse',
+        color: this.linkGroupColor(lnk),
+        label: lnk.type !== 'spouse' ? lnk.type : '',
+        pathKey: lnk.id,
+        fromId: lnk.fromId,
+        toId: lnk.toId
+      });
+    }
+
+    return paths;
   }
 
   membersForGroup(groupId: string): FamilyMember[] {
@@ -220,12 +439,13 @@ export class FamilyTreeComponent implements OnInit, OnDestroy {
 
   // ── Group manager ──────────────────────────────────────────────────────────
 
-  openGroupMgr() { this.groupForm = { name: '' }; this.editingGroupId = ''; this.showGroupMgr = true; }
+  openGroupMgr() { this.groupForm = { name: '', color: this.randomGroupColor() }; this.editingGroupId = ''; this.showGroupMgr = true; }
 
   createGroup() {
     if (!this.groupForm.name.trim()) return;
-    this.svc.createGroup(this.groupForm.name.trim());
+    this.svc.createGroup(this.groupForm.name.trim(), this.groupForm.color);
     this.groupForm.name = '';
+    this.groupForm.color = this.randomGroupColor();
   }
 
   startRenameGroup(g: FamilyGroup) { this.editingGroupId = g.id; this.groupForm.name = g.name; }
@@ -308,7 +528,7 @@ export class FamilyTreeComponent implements OnInit, OnDestroy {
     if (m) { m.x = e.clientX - this.dragging.ox; m.y = e.clientY - this.dragging.oy; }
   }
 
-  onDragEnd() { if (this.dragging) { this.svc.save(); this.dragging = null; } }
+  onDragEnd() { if (this.dragging) { this.svc.resolveOverlapsAndSave(); this.dragging = null; } }
 
   onWheel(e: WheelEvent) {
     e.preventDefault();
@@ -394,6 +614,28 @@ export class FamilyTreeComponent implements OnInit, OnDestroy {
     } else {
       this.selectedMember = this.selectedMember?.id === m.id ? null : m;
     }
+    // Clicking a card clears any active line selection
+    this.clearLinkSelection();
+  }
+
+  /** Called when a connecting line is clicked. Highlights the line and its two endpoint members. */
+  selectLink(path: SvgPath, event: MouseEvent) {
+    event.stopPropagation();
+    if (this.selectedPathKey === path.pathKey) {
+      // Toggle off
+      this.clearLinkSelection();
+    } else {
+      this.selectedPathKey = path.pathKey;
+      this.highlightedMemberIds = new Set([path.fromId, path.toId]);
+      // Also deselect the single-member selection
+      this.selectedMember = null;
+    }
+  }
+
+  /** Clears the line selection state. */
+  clearLinkSelection() {
+    this.selectedPathKey = null;
+    this.highlightedMemberIds = new Set();
   }
 
   toggleMultiSelectMode() {

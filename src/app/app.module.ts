@@ -35,6 +35,7 @@ import { ColorActionComponent } from './components/color-action/color-action.com
 import { CursiveWriteComponent } from './components/cursive-write/cursive-write.component';
 import { SudokuComponent } from './components/sudoku/sudoku.component';
 import { FamilyTreeComponent } from './pages/family-tree/family-tree.component';
+import { KidsPlannerComponent } from './pages/kids-planner/kids-planner.component';
 import { provideHttpClient } from '@angular/common/http';
 
 @NgModule({
@@ -53,7 +54,8 @@ import { provideHttpClient } from '@angular/common/http';
      ColorActionComponent,
     CursiveWriteComponent,
     SudokuComponent,
-    FamilyTreeComponent
+    FamilyTreeComponent,
+    KidsPlannerComponent
   ],
   imports: [
     BrowserModule,

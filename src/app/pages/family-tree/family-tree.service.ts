@@ -4,7 +4,9 @@ import { FamilyMember, FamilyLink, FamilyTree, FamilyGroup,
          RelationshipType, Gender, GROUP_COLORS } from './family-tree.models';
 
 const STORAGE_KEY = 'snr_family_tree_v2';
-const CARD_W = 160, CARD_H = 90, H_GAP = 40, V_GAP = 80, GROUP_GAP = 120;
+// Card dimensions must match the CSS (.ft-card { width: 200px }) + generous gaps
+// so no two boxes ever touch or overlap.
+const CARD_W = 200, CARD_H = 120, H_GAP = 24, V_GAP = 60, GROUP_GAP = 140;
 
 @Injectable({ providedIn: 'root' })
 export class FamilyTreeService {
@@ -96,12 +98,18 @@ export class FamilyTreeService {
 
   // ── Group management ───────────────────────────────────────────────────────
 
-  createGroup(name: string): FamilyGroup {
+  createGroup(name: string, color?: string): FamilyGroup {
     const g = this.makeGroup(name);
+    if (color) g.color = color;
     this.tree.groups.push(g);
     this.tree.activeGroupId = g.id;
     this.save();
     return g;
+  }
+
+  changeGroupColor(id: string, color: string) {
+    const g = this.tree.groups.find(g => g.id === id);
+    if (g) { g.color = color; this.save(); }
   }
 
   renameGroup(id: string, name: string) {
@@ -305,6 +313,7 @@ export class FamilyTreeService {
     // generation is set (parent+1 or child-1). All other members are untouched.
     this.buildLinks();
     this.layoutAll();
+    this.resolveOverlaps();
     this.save();
   }
 
@@ -548,6 +557,7 @@ export class FamilyTreeService {
       const groupWidth = this.layoutGroup(members, xOffset);
       xOffset += groupWidth + GROUP_GAP;
     }
+    this.resolveOverlaps();
   }
 
   private layoutGroupWith(
@@ -651,6 +661,52 @@ export class FamilyTreeService {
     return result;
   }
 
+  /**
+   * Iterative overlap resolver. After any layout or drag-end, nudges cards
+   * apart until no two cards intersect (with a 4px safety margin).
+   */
+  private resolveOverlaps(margin = 4, maxPasses = 20) {
+    const members = this.tree.members;
+    if (members.length < 2) return;
+
+    for (let pass = 0; pass < maxPasses; pass++) {
+      let anyOverlap = false;
+
+      for (let i = 0; i < members.length; i++) {
+        for (let j = i + 1; j < members.length; j++) {
+          const a = members[i];
+          const b = members[j];
+
+          const overlapX = (a.x + CARD_W + margin) - b.x;
+          const overlapY = (a.y + CARD_H + margin) - b.y;
+          const overlapXr = (b.x + CARD_W + margin) - a.x;
+          const overlapYr = (b.y + CARD_H + margin) - a.y;
+
+          const collide = overlapX > 0 && overlapXr > 0 && overlapY > 0 && overlapYr > 0;
+          if (!collide) continue;
+
+          anyOverlap = true;
+
+          // Push apart along the axis of least overlap
+          const minX = Math.min(overlapX, overlapXr);
+          const minY = Math.min(overlapY, overlapYr);
+
+          if (minX <= minY) {
+            const half = Math.ceil(minX / 2);
+            if (a.x <= b.x) { a.x -= half; b.x += half; }
+            else             { a.x += half; b.x -= half; }
+          } else {
+            const half = Math.ceil(minY / 2);
+            if (a.y <= b.y) { a.y -= half; b.y += half; }
+            else             { a.y += half; b.y -= half; }
+          }
+        }
+      }
+
+      if (!anyOverlap) break;
+    }
+  }
+
   // ── Queries ────────────────────────────────────────────────────────────────
 
   getMember(id: string): FamilyMember | undefined {
@@ -685,6 +741,12 @@ export class FamilyTreeService {
   clearAll() {
     const g = this.makeGroup('My Family');
     this.tree = { groups: [g], members: [], links: [], activeGroupId: g.id };
+    this.save();
+  }
+
+  /** Public: resolve any card overlaps after a manual drag and persist. */
+  resolveOverlapsAndSave() {
+    this.resolveOverlaps();
     this.save();
   }
 
