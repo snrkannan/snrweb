@@ -1,49 +1,176 @@
-import { Injectable } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import { Injectable, OnDestroy } from '@angular/core';
+import { BehaviorSubject, Subscription } from 'rxjs';
 import { FamilyMember, FamilyLink, FamilyTree, FamilyGroup,
          RelationshipType, Gender, GROUP_COLORS } from './family-tree.models';
+import { SupabaseService } from '../../services/supabase.service';
+import { AuthService } from '../../services/auth.service';
+import { RealtimeChannel } from '@supabase/supabase-js';
 
 const STORAGE_KEY = 'snr_family_tree_v2';
-const CARD_W = 160, CARD_H = 90, H_GAP = 40, V_GAP = 80, GROUP_GAP = 120;
+const DB_TABLE    = 'family_trees';
+// Card dimensions must match the CSS (.ft-card { width: 200px }) + generous gaps
+// so no two boxes ever touch or overlap.
+const CARD_W = 200, CARD_H = 120, H_GAP = 24, V_GAP = 60, GROUP_GAP = 140;
 
 @Injectable({ providedIn: 'root' })
-export class FamilyTreeService {
+export class FamilyTreeService implements OnDestroy {
 
   private tree: FamilyTree = { groups: [], members: [], links: [], activeGroupId: '' };
   tree$ = new BehaviorSubject<FamilyTree>(this.tree);
 
-  constructor() { this.load(); }
+  private realtimeChannel: RealtimeChannel | null = null;
+  private authSub: Subscription;
+
+  constructor(
+    private supabase: SupabaseService,
+    private auth: AuthService
+  ) {
+    this.load();
+
+    // Re-load from cloud whenever the user logs in or out
+    this.authSub = this.auth.user$.subscribe(user => {
+      if (user) {
+        this.loadFromCloud();
+        this.subscribeRealtime();
+      } else {
+        this.unsubscribeRealtime();
+        this.loadFromLocal();
+      }
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.authSub?.unsubscribe();
+    this.unsubscribeRealtime();
+  }
+
+  // ── Realtime subscription ──────────────────────────────────────────────────
+
+  private subscribeRealtime(): void {
+    if (!this.supabase.client) return;
+    this.unsubscribeRealtime();
+    this.realtimeChannel = this.supabase.client
+      .channel('family_trees_changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: DB_TABLE
+      }, () => {
+        // Another device saved — reload
+        this.loadFromCloud();
+      })
+      .subscribe();
+  }
+
+  private unsubscribeRealtime(): void {
+    if (this.realtimeChannel && this.supabase.client) {
+      this.supabase.client.removeChannel(this.realtimeChannel);
+      this.realtimeChannel = null;
+    }
+  }
 
   // ── Persistence ────────────────────────────────────────────────────────────
 
+  /** Save to cloud (if logged in) AND localStorage (always as fallback) */
   save() {
+    // Always persist locally as fallback / offline cache
     localStorage.setItem(STORAGE_KEY, JSON.stringify(this.tree));
+
+    // Emit to UI immediately
     this.tree$.next({
       ...this.tree,
       groups:  [...this.tree.groups],
       members: [...this.tree.members],
       links:   [...this.tree.links]
     });
+
+    // Persist to cloud asynchronously
+    if (this.auth.isLoggedIn()) {
+      this.saveToCloud().catch(err => console.warn('Cloud save failed, local data is safe:', err));
+    }
   }
 
+  private async saveToCloud(): Promise<void> {
+    if (!this.supabase.client) return;
+    const userId = this.auth.currentUser?.id;
+    if (!userId) return;
+
+    const { error } = await this.supabase.client
+      .from(DB_TABLE)
+      .upsert({
+        user_id: userId,
+        data: this.tree,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'user_id' });
+
+    if (error) throw error;
+  }
+
+  /** Load from cloud if logged in, else from localStorage */
   private load() {
+    if (this.auth.isLoggedIn()) {
+      this.loadFromCloud();
+    } else {
+      this.loadFromLocal();
+    }
+  }
+
+  async loadFromCloud(): Promise<void> {
+    if (!this.supabase.client) { this.loadFromLocal(); return; }
+    const userId = this.auth.currentUser?.id;
+    if (!userId) { this.loadFromLocal(); return; }
+
+    try {
+      const { data, error } = await this.supabase.client
+        .from(DB_TABLE)
+        .select('data')
+        .eq('user_id', userId)
+        .single();
+
+      if (error || !data) {
+        // Nothing in cloud yet — migrate localStorage data up
+        this.loadFromLocal();
+        if (this.tree.members.length > 0) {
+          await this.saveToCloud(); // push local data to cloud on first login
+        }
+        return;
+      }
+
+      this.tree = data['data'] as FamilyTree;
+      this.migrateGroups();
+      this.layoutAll();
+      this.tree$.next(this.tree);
+
+      // Also update local cache
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.tree));
+    } catch (err) {
+      console.warn('Cloud load failed, using local data:', err);
+      this.loadFromLocal();
+    }
+  }
+
+  private loadFromLocal(): void {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         this.tree = JSON.parse(raw);
-        // migrate old data without groups
-        if (!this.tree.groups) {
-          const g = this.makeGroup('My Family');
-          this.tree.groups = [g];
-          this.tree.activeGroupId = g.id;
-          this.tree.members.forEach(m => m.groupId = m.groupId || g.id);
-        }
+        this.migrateGroups();
         this.layoutAll();
       } else {
         this.seedDemo();
       }
     } catch { this.seedDemo(); }
     this.tree$.next(this.tree);
+  }
+
+  /** Migrate old data that lacks the 'groups' field */
+  private migrateGroups(): void {
+    if (!this.tree.groups) {
+      const g = this.makeGroup('My Family');
+      this.tree.groups = [g];
+      this.tree.activeGroupId = g.id;
+      this.tree.members.forEach(m => m.groupId = m.groupId || g.id);
+    }
   }
 
   // ── Seed demo ──────────────────────────────────────────────────────────────
@@ -96,12 +223,18 @@ export class FamilyTreeService {
 
   // ── Group management ───────────────────────────────────────────────────────
 
-  createGroup(name: string): FamilyGroup {
+  createGroup(name: string, color?: string): FamilyGroup {
     const g = this.makeGroup(name);
+    if (color) g.color = color;
     this.tree.groups.push(g);
     this.tree.activeGroupId = g.id;
     this.save();
     return g;
+  }
+
+  changeGroupColor(id: string, color: string) {
+    const g = this.tree.groups.find(g => g.id === id);
+    if (g) { g.color = color; this.save(); }
   }
 
   renameGroup(id: string, name: string) {
@@ -305,6 +438,7 @@ export class FamilyTreeService {
     // generation is set (parent+1 or child-1). All other members are untouched.
     this.buildLinks();
     this.layoutAll();
+    this.resolveOverlaps();
     this.save();
   }
 
@@ -548,6 +682,7 @@ export class FamilyTreeService {
       const groupWidth = this.layoutGroup(members, xOffset);
       xOffset += groupWidth + GROUP_GAP;
     }
+    this.resolveOverlaps();
   }
 
   private layoutGroupWith(
@@ -651,6 +786,52 @@ export class FamilyTreeService {
     return result;
   }
 
+  /**
+   * Iterative overlap resolver. After any layout or drag-end, nudges cards
+   * apart until no two cards intersect (with a 4px safety margin).
+   */
+  private resolveOverlaps(margin = 4, maxPasses = 20) {
+    const members = this.tree.members;
+    if (members.length < 2) return;
+
+    for (let pass = 0; pass < maxPasses; pass++) {
+      let anyOverlap = false;
+
+      for (let i = 0; i < members.length; i++) {
+        for (let j = i + 1; j < members.length; j++) {
+          const a = members[i];
+          const b = members[j];
+
+          const overlapX = (a.x + CARD_W + margin) - b.x;
+          const overlapY = (a.y + CARD_H + margin) - b.y;
+          const overlapXr = (b.x + CARD_W + margin) - a.x;
+          const overlapYr = (b.y + CARD_H + margin) - a.y;
+
+          const collide = overlapX > 0 && overlapXr > 0 && overlapY > 0 && overlapYr > 0;
+          if (!collide) continue;
+
+          anyOverlap = true;
+
+          // Push apart along the axis of least overlap
+          const minX = Math.min(overlapX, overlapXr);
+          const minY = Math.min(overlapY, overlapYr);
+
+          if (minX <= minY) {
+            const half = Math.ceil(minX / 2);
+            if (a.x <= b.x) { a.x -= half; b.x += half; }
+            else             { a.x += half; b.x -= half; }
+          } else {
+            const half = Math.ceil(minY / 2);
+            if (a.y <= b.y) { a.y -= half; b.y += half; }
+            else             { a.y += half; b.y -= half; }
+          }
+        }
+      }
+
+      if (!anyOverlap) break;
+    }
+  }
+
   // ── Queries ────────────────────────────────────────────────────────────────
 
   getMember(id: string): FamilyMember | undefined {
@@ -685,6 +866,12 @@ export class FamilyTreeService {
   clearAll() {
     const g = this.makeGroup('My Family');
     this.tree = { groups: [g], members: [], links: [], activeGroupId: g.id };
+    this.save();
+  }
+
+  /** Public: resolve any card overlaps after a manual drag and persist. */
+  resolveOverlapsAndSave() {
+    this.resolveOverlaps();
     this.save();
   }
 

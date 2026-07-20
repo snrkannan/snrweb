@@ -1,5 +1,224 @@
-.snr-navbar {
-  background-color: var(--snr-primary);
-  min-height: 48px;
-  transition: background-color 0.3s ease;
+// Azure DevOps light theme — white header with dark text/icons
+:host { display: block; }
+
+.snr-header {
+  display: flex;
+  align-items: center;
+  height: var(--snr-header-h, 48px);
+  padding: 0 10px;
+  background: #ffffff;
+  border-bottom: 1px solid #edebe9;   // ADO border (Fluent UI neutral-lighter-alt)
+  gap: 4px;
+}
+
+// ── Left: menu toggle + brand ────────────────────────────────────────────────
+.snr-header-left  { display: flex; align-items: center; gap: 4px; }
+.snr-header-brand { display: flex; align-items: center; gap: 8px; padding: 0 8px; }
+
+.snr-header-logo {
+  width: 24px; height: 24px; border-radius: 3px;
+  background: var(--snr-primary);
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.2s ease;
+  mat-icon { font-size: 14px; width: 14px; height: 14px; color: white; }
+}
+
+.snr-header-title {
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1b1a19;     // ADO near-black
+  letter-spacing: 0;
+}
+
+// ── Right: actions + avatar ──────────────────────────────────────────────────
+.snr-header-right   { display: flex; align-items: center; gap: 0; margin-left: auto; }
+.snr-header-divider { width: 1px; height: 16px; background: #edebe9; margin: 0 4px; }
+
+// ADO icon buttons: dark icons on white, subtle gray hover
+.snr-icon-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px;
+  border: none; border-radius: 2px;
+  background: transparent;
+  cursor: pointer;
+  color: #605e5c;     // ADO neutral-secondary
+  transition: background 0.1s ease, color 0.1s ease;
+
+  mat-icon { font-size: 18px; width: 18px; height: 18px; }
+
+  &:hover {
+    background: #f3f2f1;   // ADO neutral-lighter hover
+    color: #1b1a19;
+    mat-icon { color: #1b1a19; }
+  }
+
+  &:active {
+    background: #edebe9;
+  }
+}
+
+// Avatar
+.snr-avatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--snr-primary);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; margin: 0 4px;
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 11px; font-weight: 600; color: white;
+  transition: opacity 0.15s ease;
+  mat-icon { font-size: 16px; width: 16px; height: 16px; color: white; }
+  &:hover { opacity: 0.85; }
+}
+
+// ── Theme dropdown ───────────────────────────────────────────────────────────
+.snr-header-dropdown { position: relative; }
+
+.snr-dropdown-panel {
+  position: absolute; top: calc(100% + 2px); right: 0;
+  width: 195px;
+  background: #ffffff;
+  border: 1px solid #edebe9;
+  border-radius: 2px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12), 0 0 2px rgba(0,0,0,0.08);
+  z-index: 2000;
+  opacity: 0; pointer-events: none;
+  transform: translateY(-4px);
+  transition: opacity 0.12s ease, transform 0.12s ease;
+  overflow: hidden;
+
+  &.open { opacity: 1; pointer-events: auto; transform: translateY(0); }
+}
+
+.snr-dropdown-header {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 12px 6px;
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 11px; font-weight: 600;
+  color: #605e5c;
+  text-transform: uppercase; letter-spacing: 0.5px;
+  border-bottom: 1px solid #edebe9;
+  mat-icon { font-size: 13px; width: 13px; height: 13px; }
+}
+
+.snr-dropdown-list { padding: 4px 0; }
+
+.snr-dropdown-item {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; padding: 6px 12px;
+  border: none; border-radius: 0;
+  background: transparent; cursor: pointer;
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 13px; font-weight: 400; color: #1b1a19;
+  text-align: left;
+  transition: background 0.08s ease;
+
+  &:hover  { background: #f3f2f1; }
+  &.active { background: var(--snr-primary-light); color: var(--snr-primary); font-weight: 600; }
+}
+
+.snr-theme-swatch {
+  width: 12px; height: 12px; border-radius: 50%;
+  border: 1.5px solid rgba(0,0,0,0.12); flex-shrink: 0;
+}
+
+.snr-check {
+  margin-left: auto;
+  font-size: 13px !important; width: 13px !important; height: 13px !important;
+  color: var(--snr-primary);
+}
+
+// ── User menu (auth dropdown) ─────────────────────────────────────────────────
+.snr-user-dropdown { position: relative; }
+
+.snr-avatar--logged-in {
+  cursor: pointer;
+  font-size: 11px;
+  user-select: none;
+}
+
+.snr-sign-in-btn {
+  display: flex; align-items: center; gap: 5px;
+  height: 30px; padding: 0 10px;
+  border: 1px solid var(--snr-primary);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--snr-primary);
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 12px; font-weight: 600;
+  cursor: pointer;
+  margin-right: 4px;
+  transition: background 0.12s ease, color 0.12s ease;
+  mat-icon { font-size: 14px !important; width: 14px !important; height: 14px !important; }
+  &:hover { background: var(--snr-primary); color: white; }
+}
+
+.snr-user-panel {
+  position: absolute; top: calc(100% + 4px); right: 0;
+  width: 230px;
+  background: #ffffff;
+  border: 1px solid #edebe9;
+  border-radius: 4px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.14), 0 0 2px rgba(0,0,0,0.08);
+  z-index: 2000;
+  opacity: 0; pointer-events: none;
+  transform: translateY(-4px);
+  transition: opacity 0.12s ease, transform 0.12s ease;
+  overflow: hidden;
+  &.open { opacity: 1; pointer-events: auto; transform: translateY(0); }
+}
+
+.snr-user-panel-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 12px 12px;
+}
+
+.snr-user-panel-avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--snr-primary), #0d6efd);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 13px; font-weight: 700; color: white;
+  flex-shrink: 0;
+}
+
+.snr-user-panel-info {
+  display: flex; flex-direction: column; gap: 2px;
+  min-width: 0;
+}
+
+.snr-user-name {
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 13px; font-weight: 600; color: #1b1a19;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.snr-user-badge {
+  display: flex; align-items: center; gap: 3px;
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 11px; color: #198754;
+  mat-icon { font-size: 12px !important; width: 12px !important; height: 12px !important; }
+}
+
+.snr-user-panel-divider {
+  height: 1px; background: #edebe9; margin: 0;
+}
+
+.snr-user-panel-item {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; padding: 9px 12px;
+  border: none; border-radius: 0;
+  background: transparent; cursor: pointer;
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 13px; font-weight: 400; color: #1b1a19;
+  text-align: left;
+  transition: background 0.08s ease;
+  mat-icon { font-size: 16px !important; width: 16px !important; height: 16px !important; }
+  &:hover { background: #f3f2f1; }
+
+  &--signout {
+    color: #dc3545;
+    mat-icon { color: #dc3545; }
+    &:hover { background: #fff1f1; }
+  }
 }

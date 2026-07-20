@@ -1,34 +1,73 @@
-<nav class="navbar px-3 py-0 snr-navbar">
-  <div class="d-flex align-items-center gap-2">
-    <button class="btn btn-link text-white p-1" (click)="sidenav.toggle()">
+<header class="snr-header">
+  <!-- Left: menu toggle + breadcrumb -->
+  <div class="snr-header-left">
+    <button class="snr-icon-btn" (click)="sidenav.toggle()" title="Toggle menu">
       <mat-icon>menu</mat-icon>
     </button>
-    <span class="fw-bold text-white ms-1">SNR Tools</span>
+    <div class="snr-header-brand">
+      <span class="snr-header-logo"><mat-icon>hub</mat-icon></span>
+      <span class="snr-header-title">SNR Tools</span>
+    </div>
   </div>
 
-  <div class="d-flex align-items-center gap-1 ms-auto position-relative">
-    <!-- Theme picker (Angular-driven dropdown) -->
-    <div class="position-relative">
-      <button class="btn btn-link text-white p-1" (click)="toggleThemeMenu()" title="Change Theme">
+  <!-- Right: theme + auth avatar -->
+  <div class="snr-header-right">
+
+    <!-- Theme picker -->
+    <div class="snr-header-dropdown" (click)="$event.stopPropagation()">
+      <button class="snr-icon-btn" (click)="toggleThemeMenu()" title="Change Theme">
         <mat-icon>palette</mat-icon>
       </button>
-      <ul class="dropdown-menu dropdown-menu-end shadow" [class.show]="themeMenuOpen" style="min-width:160px;">
-        <li class="dropdown-header small text-muted px-3 py-1">Choose Theme</li>
-        <li *ngFor="let theme of themes; let i = index">
-          <button class="dropdown-item d-flex align-items-center gap-2 py-2"
+      <div class="snr-dropdown-panel" [class.open]="themeMenuOpen">
+        <div class="snr-dropdown-header">
+          <mat-icon>palette</mat-icon> Choose Theme
+        </div>
+        <div class="snr-dropdown-list">
+          <button class="snr-dropdown-item" *ngFor="let theme of themes; let i = index"
                   [class.active]="currentTheme === i"
                   (click)="changeTheme(i)">
-            <span class="rounded-circle flex-shrink-0"
-                  [style.background]="theme.primary"
-                  style="width:14px;height:14px;border:2px solid rgba(0,0,0,0.15);display:inline-block;"></span>
-            <span class="small">{{ theme.name }}</span>
+            <span class="snr-theme-swatch" [style.background]="theme.primary"></span>
+            {{ theme.name }}
+            <mat-icon *ngIf="currentTheme === i" class="snr-check">check</mat-icon>
           </button>
-        </li>
-      </ul>
+        </div>
+      </div>
     </div>
 
-    <button class="btn btn-link text-white p-1">
-      <mat-icon>settings</mat-icon>
-    </button>
+    <div class="snr-header-divider"></div>
+
+    <!-- ── Auth: User is logged IN ── -->
+    <ng-container *ngIf="auth.isLoggedIn()">
+      <div class="snr-user-dropdown" (click)="$event.stopPropagation()">
+        <div class="snr-avatar snr-avatar--logged-in" (click)="toggleUserMenu()" title="Account">
+          {{ auth.getInitials() }}
+        </div>
+        <div class="snr-user-panel" [class.open]="userMenuOpen">
+          <div class="snr-user-panel-header">
+            <div class="snr-user-panel-avatar">{{ auth.getInitials() }}</div>
+            <div class="snr-user-panel-info">
+              <span class="snr-user-name">{{ auth.getDisplayName() }}</span>
+              <span class="snr-user-badge">
+                <mat-icon>cloud_done</mat-icon> Cloud Synced
+              </span>
+            </div>
+          </div>
+          <div class="snr-user-panel-divider"></div>
+          <button class="snr-user-panel-item snr-user-panel-item--signout" (click)="signOut()">
+            <mat-icon>logout</mat-icon>
+            Sign Out
+          </button>
+        </div>
+      </div>
+    </ng-container>
+
+    <!-- ── Auth: User is logged OUT ── -->
+    <ng-container *ngIf="!auth.isLoggedIn()">
+      <button class="snr-sign-in-btn" (click)="navigateToLogin()" title="Sign In">
+        <mat-icon>login</mat-icon>
+        <span>Sign In</span>
+      </button>
+    </ng-container>
+
   </div>
-</nav>
+</header>

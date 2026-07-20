@@ -1,0 +1,374 @@
+// ── Design tokens ────────────────────────────────────────────────────────────
+:host {
+  --kp-bg:        #f0f4ff;
+  --kp-surface:   #ffffff;
+  --kp-primary:   #4A90D9;
+  --kp-primary2:  #6a5acd;
+  --kp-text:      #2d3142;
+  --kp-muted:     #6b7280;
+  --kp-border:    #e5e7eb;
+  --kp-radius:    12px;
+  --kp-shadow:    0 2px 12px rgba(74,144,217,.12);
+  display: block; min-height: 100vh; background: var(--kp-bg);
+}
+
+// ── Shell ─────────────────────────────────────────────────────────────────────
+.kp-shell {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px 20px 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+// ── Header ────────────────────────────────────────────────────────────────────
+.kp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(135deg, var(--kp-primary) 0%, var(--kp-primary2) 100%);
+  border-radius: 18px;
+  padding: 20px 28px;
+  color: #fff;
+  box-shadow: 0 8px 32px rgba(74,144,217,.35);
+}
+.kp-header-left { display: flex; align-items: center; gap: 16px; }
+.kp-header-icon { font-size: 40px; line-height: 1; }
+.kp-header-title {
+  margin: 0; font-size: 26px; font-weight: 800;
+  letter-spacing: -0.5px; color: #fff;
+}
+.kp-header-sub { margin: 2px 0 0; font-size: 13px; opacity: .8; }
+.kp-header-actions { display: flex; gap: 10px; }
+
+// ── Buttons ───────────────────────────────────────────────────────────────────
+.kp-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 18px; border-radius: 9px; border: none;
+  font-size: 13px; font-weight: 600; cursor: pointer; transition: all .15s;
+  &:disabled { opacity: .5; cursor: not-allowed; }
+}
+.kp-btn-primary {
+  background: linear-gradient(135deg, var(--kp-primary), var(--kp-primary2));
+  color: #fff; box-shadow: 0 4px 14px rgba(74,144,217,.4);
+  &:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(74,144,217,.5); }
+}
+.kp-btn-outline {
+  background: rgba(255,255,255,.15); border: 1.5px solid rgba(255,255,255,.6);
+  color: #fff; backdrop-filter: blur(4px);
+  &:hover { background: rgba(255,255,255,.25); }
+}
+.kp-btn-ghost {
+  background: transparent; border: 1.5px solid var(--kp-border);
+  color: var(--kp-muted);
+  &:hover { background: #f9fafb; }
+}
+
+// ── Stats row ─────────────────────────────────────────────────────────────────
+.kp-stats-row {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px;
+}
+.kp-stat-card {
+  background: var(--kp-surface); border-radius: var(--kp-radius);
+  padding: 18px 20px; display: flex; align-items: center; gap: 14px;
+  box-shadow: var(--kp-shadow); border: 1px solid var(--kp-border);
+  transition: transform .2s;
+  &:hover { transform: translateY(-2px); }
+}
+.kp-stat-icon { font-size: 28px; }
+.kp-stat-value { font-size: 22px; font-weight: 800; color: var(--kp-primary); }
+.kp-stat-label { font-size: 11px; color: var(--kp-muted); text-transform: uppercase; letter-spacing: .5px; }
+
+// ── PDF panel ─────────────────────────────────────────────────────────────────
+.kp-pdf-panel {
+  background: var(--kp-surface); border-radius: var(--kp-radius);
+  border: 2px dashed var(--kp-primary); padding: 20px;
+  box-shadow: var(--kp-shadow);
+  animation: slideDown .2s ease;
+}
+@keyframes slideDown { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:none; } }
+.kp-pdf-title { font-size: 15px; font-weight: 700; color: var(--kp-text); margin-bottom: 14px; }
+.kp-pdf-row { display: flex; gap: 16px; flex-wrap: wrap; }
+.kp-pdf-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
+
+// Segmented control
+.kp-seg { display: flex; border-radius: 8px; overflow: hidden; border: 1.5px solid var(--kp-border); }
+.kp-seg-btn {
+  flex: 1; padding: 7px 14px; font-size: 12px; font-weight: 600; border: none; cursor: pointer;
+  background: transparent; color: var(--kp-muted); transition: all .15s;
+  &.active { background: var(--kp-primary); color: #fff; }
+  &:hover:not(.active) { background: #f0f4ff; }
+}
+
+// ── Filter bar ────────────────────────────────────────────────────────────────
+.kp-filter-bar {
+  display: flex; gap: 6px; flex-wrap: wrap;
+}
+.kp-filter-btn {
+  padding: 6px 14px; border-radius: 20px; border: 1.5px solid var(--kp-border);
+  background: var(--kp-surface); color: var(--kp-muted);
+  font-size: 12px; font-weight: 600; cursor: pointer; transition: all .15s;
+  &.active, &:hover {
+    background: var(--kp-primary); color: #fff; border-color: var(--kp-primary);
+  }
+}
+
+// ── Board (all-days kanban) ───────────────────────────────────────────────────
+.kp-board {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 12px;
+  overflow-x: auto;
+  min-width: 0;
+}
+.kp-day-col {
+  min-width: 140px;
+  background: var(--kp-surface);
+  border-radius: var(--kp-radius);
+  box-shadow: var(--kp-shadow);
+  border: 1px solid var(--kp-border);
+  overflow: hidden;
+}
+.kp-day-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 12px;
+  background: linear-gradient(135deg, var(--kp-primary) 0%, var(--kp-primary2) 100%);
+  color: #fff;
+}
+.kp-day-name { font-size: 13px; font-weight: 700; }
+.kp-day-count {
+  background: rgba(255,255,255,.3); border-radius: 10px;
+  padding: 1px 7px; font-size: 11px; font-weight: 700;
+}
+.kp-task-list { padding: 8px; display: flex; flex-direction: column; gap: 8px; }
+
+// ── Task card (board) ─────────────────────────────────────────────────────────
+.kp-task-card {
+  background: #f9faff;
+  border-radius: 10px;
+  border-left: 4px solid var(--accent);
+  padding: 10px;
+  display: flex; flex-direction: column; gap: 6px;
+  box-shadow: 0 1px 6px rgba(0,0,0,.06);
+  transition: transform .15s, box-shadow .15s;
+  &:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,.1); }
+}
+.kp-task-top { display: flex; align-items: flex-start; gap: 8px; }
+.kp-task-emoji { font-size: 18px; line-height: 1; }
+.kp-task-info { flex: 1; min-width: 0; }
+.kp-task-title { font-size: 12px; font-weight: 700; color: var(--kp-text); line-height: 1.3; word-break: break-word; }
+.kp-task-time { font-size: 10px; color: var(--kp-muted); margin-top: 2px; }
+.kp-task-desc { font-size: 10px; color: var(--kp-muted); font-style: italic; line-height: 1.4; }
+.kp-task-actions { display: flex; gap: 2px; }
+.kp-task-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+
+// ── Task action bar (Edit / Delete) ───────────────────────────────────────────
+.kp-task-action-bar {
+  display: flex;
+  gap: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--kp-border);
+  margin-top: 2px;
+}
+.kp-action-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border: none;
+  border-radius: 7px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .15s;
+  letter-spacing: .01em;
+}
+.kp-action-edit {
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1.5px solid #bfdbfe;
+  &:hover { background: #dbeafe; transform: translateY(-1px); box-shadow: 0 2px 8px rgba(37,99,235,.15); }
+}
+.kp-action-delete {
+  background: #fff1f2;
+  color: #dc2626;
+  border: 1.5px solid #fecdd3;
+  &:hover { background: #ffe4e6; transform: translateY(-1px); box-shadow: 0 2px 8px rgba(220,38,38,.15); }
+}
+
+// ── Icon buttons (kept for reuse) ─────────────────────────────────────────────
+.kp-icon-btn {
+  background: none; border: none; cursor: pointer; font-size: 13px;
+  padding: 2px; border-radius: 4px; transition: background .1s;
+  &:hover { background: rgba(0,0,0,.06); }
+  &.danger:hover { background: rgba(239,68,68,.1); }
+}
+
+// ── Chips ─────────────────────────────────────────────────────────────────────
+.kp-chip {
+  display: inline-flex; align-items: center; gap: 2px;
+  padding: 2px 7px; border-radius: 10px;
+  font-size: 9px; font-weight: 700; color: #fff; white-space: nowrap;
+  &.priority-high   { background: #ef4444; }
+  &.priority-medium { background: #f59e0b; }
+  &.priority-low    { background: #10b981; }
+  &.child           { background: #8b5cf6; }
+}
+
+
+// ── Empty states ──────────────────────────────────────────────────────────────
+.kp-empty-day {
+  text-align: center; padding: 14px 4px;
+  color: var(--kp-muted); font-size: 11px; font-style: italic;
+}
+.kp-empty-state {
+  text-align: center; padding: 48px 24px;
+  color: var(--kp-muted); display: flex; flex-direction: column; align-items: center; gap: 12px;
+}
+.kp-empty-icon { font-size: 48px; }
+
+// ── Single day list ───────────────────────────────────────────────────────────
+.kp-single-list { display: flex; flex-direction: column; gap: 10px; }
+.kp-single-header {
+  display: flex; align-items: center; gap: 12px;
+  h2 { margin: 0; font-size: 20px; font-weight: 800; color: var(--kp-text); }
+}
+.kp-badge {
+  background: var(--kp-primary); color: #fff; border-radius: 12px;
+  padding: 3px 12px; font-size: 12px; font-weight: 700;
+}
+
+.kp-task-row {
+  display: flex; align-items: center; gap: 14px;
+  background: var(--kp-surface); border-radius: var(--kp-radius);
+  padding: 14px 18px; box-shadow: var(--kp-shadow);
+  border: 1px solid var(--kp-border);
+  transition: transform .15s;
+  &:hover { transform: translateX(4px); }
+}
+.kp-row-stripe {
+  width: 4px; height: 48px; border-radius: 4px;
+  background: var(--accent); flex-shrink: 0;
+}
+.kp-row-emoji { font-size: 26px; flex-shrink: 0; }
+.kp-row-body { flex: 1; min-width: 0; }
+.kp-row-title { font-size: 15px; font-weight: 700; color: var(--kp-text); }
+.kp-row-meta { font-size: 12px; color: var(--kp-muted); margin-top: 3px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.kp-row-desc { font-size: 12px; color: var(--kp-muted); font-style: italic; margin-top: 4px; }
+.kp-row-priority { font-size: 18px; flex-shrink: 0; }
+.kp-row-btns { display: flex; gap: 6px; flex-shrink: 0; }
+
+// ── Form fields ───────────────────────────────────────────────────────────────
+.kp-field {
+  display: flex; flex-direction: column; gap: 5px;
+  &.flex-1 { flex: 1; }
+  &.flex-2 { flex: 2; }
+}
+.kp-label { font-size: 12px; font-weight: 700; color: var(--kp-text); }
+.kp-input {
+  padding: 9px 12px; border-radius: 8px;
+  border: 1.5px solid var(--kp-border);
+  font-size: 13px; color: var(--kp-text);
+  background: #fafbff; outline: none; width: 100%; box-sizing: border-box;
+  transition: border-color .15s;
+  &:focus { border-color: var(--kp-primary); }
+}
+.kp-textarea { resize: vertical; min-height: 60px; }
+
+// Category grid
+.kp-cat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.kp-cat-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 10px 6px; border-radius: 10px;
+  border: 2px solid var(--kp-border); background: #fafbff;
+  cursor: pointer; transition: all .15s;
+  &:hover { border-color: var(--cat-color); background: color-mix(in srgb, var(--cat-color) 10%, white); }
+  &.selected {
+    border-color: var(--cat-color);
+    background: color-mix(in srgb, var(--cat-color) 15%, white);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--cat-color) 20%, transparent);
+  }
+}
+.kp-cat-emoji { font-size: 20px; }
+.kp-cat-label { font-size: 10px; font-weight: 700; color: var(--kp-text); text-align: center; }
+
+// Day grid
+.kp-day-grid { display: flex; gap: 6px; }
+.kp-day-btn {
+  flex: 1; padding: 8px 4px; border-radius: 8px;
+  border: 2px solid var(--kp-border); background: #fafbff;
+  font-size: 11px; font-weight: 700; cursor: pointer; transition: all .15s;
+  color: var(--kp-muted);
+  &:hover { border-color: var(--kp-primary); color: var(--kp-primary); }
+  &.selected {
+    background: var(--kp-primary); color: #fff; border-color: var(--kp-primary);
+  }
+}
+
+// ── Form row ──────────────────────────────────────────────────────────────────
+.kp-form-row { display: flex; gap: 14px; flex-wrap: wrap; }
+
+// ── Modal ─────────────────────────────────────────────────────────────────────
+.kp-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.45); z-index: 900;
+  backdrop-filter: blur(3px);
+  animation: fadeIn .2s;
+}
+.kp-modal {
+  position: fixed; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(680px, 96vw);
+  max-height: 92vh; overflow-y: auto;
+  background: var(--kp-surface);
+  border-radius: 18px;
+  box-shadow: 0 24px 80px rgba(0,0,0,.3);
+  z-index: 901;
+  animation: popIn .2s cubic-bezier(.34,1.56,.64,1);
+  display: flex; flex-direction: column;
+}
+@keyframes popIn {
+  from { opacity:0; transform:translate(-50%,-50%) scale(.92); }
+  to   { opacity:1; transform:translate(-50%,-50%) scale(1); }
+}
+@keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+
+.kp-modal-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 18px 22px;
+  background: linear-gradient(135deg, var(--kp-primary), var(--kp-primary2));
+  color: #fff; border-radius: 18px 18px 0 0;
+  font-size: 16px; font-weight: 700;
+}
+.kp-modal-icon { font-size: 20px; }
+.kp-modal-close {
+  margin-left: auto; background: rgba(255,255,255,.2); border: none;
+  color: #fff; border-radius: 50%; width: 28px; height: 28px;
+  cursor: pointer; font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .15s;
+  &:hover { background: rgba(255,255,255,.35); }
+}
+.kp-modal-body { padding: 22px; display: flex; flex-direction: column; gap: 16px; flex: 1; }
+.kp-modal-footer {
+  display: flex; justify-content: flex-end; gap: 10px;
+  padding: 14px 22px; border-top: 1px solid var(--kp-border);
+}
+
+// ── Responsive ────────────────────────────────────────────────────────────────
+@media (max-width: 1024px) {
+  .kp-board { grid-template-columns: repeat(4, 1fr); }
+  .kp-stats-row { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 640px) {
+  .kp-board { grid-template-columns: repeat(2, 1fr); }
+  .kp-header { flex-direction: column; gap: 14px; text-align: center; }
+  .kp-header-actions { flex-wrap: wrap; justify-content: center; }
+  .kp-stats-row { grid-template-columns: repeat(2, 1fr); }
+  .kp-cat-grid { grid-template-columns: repeat(3, 1fr); }
+  .kp-day-grid { flex-wrap: wrap; }
+  .kp-form-row { flex-direction: column; }
+}
