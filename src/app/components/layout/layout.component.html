@@ -1,12 +1,20 @@
-<mat-sidenav-container class="snr-layout-container">
-  <mat-sidenav #sidenav mode="side" opened class="snr-sidenav-drawer">
-    <app-sidenav [sidenav]="sidenav"></app-sidenav>
-  </mat-sidenav>
-  <mat-sidenav-content class="snr-main-content">
-    <app-header [sidenav]="sidenav"></app-header>
-    <div class="snr-page-body">
-      <router-outlet></router-outlet>
-    </div>
-    <app-footer></app-footer>
-  </mat-sidenav-content>
-</mat-sidenav-container>
+<!-- ── Login page: full screen, no shell ───────────────────────────────── -->
+<ng-container *ngIf="isLoginPage$ | async">
+  <router-outlet></router-outlet>
+</ng-container>
+
+<!-- ── App shell: sidenav + header + content + footer ─────────────────── -->
+<ng-container *ngIf="!(isLoginPage$ | async)">
+  <mat-sidenav-container class="snr-layout-container">
+    <mat-sidenav #sidenav mode="side" opened class="snr-sidenav-drawer">
+      <app-sidenav [sidenav]="sidenav"></app-sidenav>
+    </mat-sidenav>
+    <mat-sidenav-content class="snr-main-content">
+      <app-header [sidenav]="sidenav"></app-header>
+      <div class="snr-page-body">
+        <router-outlet></router-outlet>
+      </div>
+      <app-footer></app-footer>
+    </mat-sidenav-content>
+  </mat-sidenav-container>
+</ng-container>

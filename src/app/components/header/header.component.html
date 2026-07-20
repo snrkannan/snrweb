@@ -10,7 +10,7 @@
     </div>
   </div>
 
-  <!-- Right: theme + settings + avatar -->
+  <!-- Right: theme + auth avatar -->
   <div class="snr-header-right">
 
     <!-- Theme picker -->
@@ -36,13 +36,38 @@
 
     <div class="snr-header-divider"></div>
 
-    <button class="snr-icon-btn" title="Settings">
-      <mat-icon>settings</mat-icon>
-    </button>
+    <!-- ── Auth: User is logged IN ── -->
+    <ng-container *ngIf="auth.isLoggedIn()">
+      <div class="snr-user-dropdown" (click)="$event.stopPropagation()">
+        <div class="snr-avatar snr-avatar--logged-in" (click)="toggleUserMenu()" title="Account">
+          {{ auth.getInitials() }}
+        </div>
+        <div class="snr-user-panel" [class.open]="userMenuOpen">
+          <div class="snr-user-panel-header">
+            <div class="snr-user-panel-avatar">{{ auth.getInitials() }}</div>
+            <div class="snr-user-panel-info">
+              <span class="snr-user-name">{{ auth.getDisplayName() }}</span>
+              <span class="snr-user-badge">
+                <mat-icon>cloud_done</mat-icon> Cloud Synced
+              </span>
+            </div>
+          </div>
+          <div class="snr-user-panel-divider"></div>
+          <button class="snr-user-panel-item snr-user-panel-item--signout" (click)="signOut()">
+            <mat-icon>logout</mat-icon>
+            Sign Out
+          </button>
+        </div>
+      </div>
+    </ng-container>
 
-    <!-- Avatar -->
-    <div class="snr-avatar" title="Profile">
-      <mat-icon>person</mat-icon>
-    </div>
+    <!-- ── Auth: User is logged OUT ── -->
+    <ng-container *ngIf="!auth.isLoggedIn()">
+      <button class="snr-sign-in-btn" (click)="navigateToLogin()" title="Sign In">
+        <mat-icon>login</mat-icon>
+        <span>Sign In</span>
+      </button>
+    </ng-container>
+
   </div>
 </header>

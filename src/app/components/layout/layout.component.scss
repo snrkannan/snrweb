@@ -1,4 +1,6 @@
 // Layout container — all surfaces white, ADO light theme
+:host { display: block; height: 100vh; }
+
 .snr-layout-container {
   position: fixed;
   inset: 0;

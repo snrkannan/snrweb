@@ -4,6 +4,10 @@ import {
   CATEGORY_META, DAYS, PdfBasis
 } from './kids-planner.models';
 import { KidsPlannerPdfService } from './kids-planner-pdf.service';
+import { SupabaseService } from '../../services/supabase.service';
+import { AuthService } from '../../services/auth.service';
+
+const DB_TABLE = 'kids_tasks';
 
 @Component({
   selector: 'app-kids-planner',
@@ -65,7 +69,11 @@ export class KidsPlannerComponent implements OnInit {
     return new Set(this.tasks.map(t => t.childName).filter(Boolean)).size;
   }
 
-  constructor(private pdfService: KidsPlannerPdfService) {}
+  constructor(
+    private pdfService: KidsPlannerPdfService,
+    private supabase: SupabaseService,
+    private auth: AuthService
+  ) {}
 
   ngOnInit(): void {
     this.loadFromStorage();
@@ -128,6 +136,10 @@ export class KidsPlannerComponent implements OnInit {
   deleteTask(id: string): void {
     this.tasks = this.tasks.filter(t => t.id !== id);
     this.saveToStorage();
+    if (this.auth.isLoggedIn() && this.supabase.client) {
+      this.supabase.client.from(DB_TABLE).delete().eq('id', id)
+        .then(({ error }) => { if (error) console.warn('Cloud delete failed:', error); });
+    }
   }
 
   // ── PDF ────────────────────────────────────────────────────────────────────
@@ -176,11 +188,71 @@ export class KidsPlannerComponent implements OnInit {
     };
   }
 
+  /** Save all tasks: localStorage always + Supabase if logged in */
   private saveToStorage(): void {
     localStorage.setItem('kp_tasks', JSON.stringify(this.tasks));
+    if (this.auth.isLoggedIn()) {
+      this.saveAllToCloud().catch(err => console.warn('Cloud save failed:', err));
+    }
   }
 
+  private async saveAllToCloud(): Promise<void> {
+    if (!this.supabase.client) return;
+    const userId = this.auth.currentUser?.id;
+    if (!userId) return;
+
+    const rows = this.tasks.map(t => ({
+      id: t.id,
+      user_id: userId,
+      data: t,
+      updated_at: new Date().toISOString()
+    }));
+
+    const { error } = await this.supabase.client
+      .from(DB_TABLE)
+      .upsert(rows, { onConflict: 'id' });
+
+    if (error) throw error;
+  }
+
+  /** Load tasks: Supabase if logged in, localStorage otherwise */
   private loadFromStorage(): void {
+    if (this.auth.isLoggedIn()) {
+      this.loadFromCloud();
+    } else {
+      this.loadFromLocal();
+    }
+  }
+
+  private async loadFromCloud(): Promise<void> {
+    if (!this.supabase.client) { this.loadFromLocal(); return; }
+    const userId = this.auth.currentUser?.id;
+    if (!userId) { this.loadFromLocal(); return; }
+
+    try {
+      const { data, error } = await this.supabase.client
+        .from(DB_TABLE)
+        .select('data')
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        this.tasks = data.map((row: any) => row['data'] as KidsTask);
+      } else {
+        // Nothing in cloud — migrate localStorage up
+        this.loadFromLocal();
+        if (this.tasks.length > 0) {
+          await this.saveAllToCloud();
+        }
+      }
+    } catch (err) {
+      console.warn('Cloud load failed, using local data:', err);
+      this.loadFromLocal();
+    }
+  }
+
+  private loadFromLocal(): void {
     try {
       const raw = localStorage.getItem('kp_tasks');
       if (raw) this.tasks = JSON.parse(raw);
@@ -193,3 +265,4 @@ export class KidsPlannerComponent implements OnInit {
 
   trackById(_: number, t: KidsTask) { return t.id; }
 }
+

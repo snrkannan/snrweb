@@ -1,51 +1,176 @@
-import { Injectable } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import { Injectable, OnDestroy } from '@angular/core';
+import { BehaviorSubject, Subscription } from 'rxjs';
 import { FamilyMember, FamilyLink, FamilyTree, FamilyGroup,
          RelationshipType, Gender, GROUP_COLORS } from './family-tree.models';
+import { SupabaseService } from '../../services/supabase.service';
+import { AuthService } from '../../services/auth.service';
+import { RealtimeChannel } from '@supabase/supabase-js';
 
 const STORAGE_KEY = 'snr_family_tree_v2';
+const DB_TABLE    = 'family_trees';
 // Card dimensions must match the CSS (.ft-card { width: 200px }) + generous gaps
 // so no two boxes ever touch or overlap.
 const CARD_W = 200, CARD_H = 120, H_GAP = 24, V_GAP = 60, GROUP_GAP = 140;
 
 @Injectable({ providedIn: 'root' })
-export class FamilyTreeService {
+export class FamilyTreeService implements OnDestroy {
 
   private tree: FamilyTree = { groups: [], members: [], links: [], activeGroupId: '' };
   tree$ = new BehaviorSubject<FamilyTree>(this.tree);
 
-  constructor() { this.load(); }
+  private realtimeChannel: RealtimeChannel | null = null;
+  private authSub: Subscription;
+
+  constructor(
+    private supabase: SupabaseService,
+    private auth: AuthService
+  ) {
+    this.load();
+
+    // Re-load from cloud whenever the user logs in or out
+    this.authSub = this.auth.user$.subscribe(user => {
+      if (user) {
+        this.loadFromCloud();
+        this.subscribeRealtime();
+      } else {
+        this.unsubscribeRealtime();
+        this.loadFromLocal();
+      }
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.authSub?.unsubscribe();
+    this.unsubscribeRealtime();
+  }
+
+  // ── Realtime subscription ──────────────────────────────────────────────────
+
+  private subscribeRealtime(): void {
+    if (!this.supabase.client) return;
+    this.unsubscribeRealtime();
+    this.realtimeChannel = this.supabase.client
+      .channel('family_trees_changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: DB_TABLE
+      }, () => {
+        // Another device saved — reload
+        this.loadFromCloud();
+      })
+      .subscribe();
+  }
+
+  private unsubscribeRealtime(): void {
+    if (this.realtimeChannel && this.supabase.client) {
+      this.supabase.client.removeChannel(this.realtimeChannel);
+      this.realtimeChannel = null;
+    }
+  }
 
   // ── Persistence ────────────────────────────────────────────────────────────
 
+  /** Save to cloud (if logged in) AND localStorage (always as fallback) */
   save() {
+    // Always persist locally as fallback / offline cache
     localStorage.setItem(STORAGE_KEY, JSON.stringify(this.tree));
+
+    // Emit to UI immediately
     this.tree$.next({
       ...this.tree,
       groups:  [...this.tree.groups],
       members: [...this.tree.members],
       links:   [...this.tree.links]
     });
+
+    // Persist to cloud asynchronously
+    if (this.auth.isLoggedIn()) {
+      this.saveToCloud().catch(err => console.warn('Cloud save failed, local data is safe:', err));
+    }
   }
 
+  private async saveToCloud(): Promise<void> {
+    if (!this.supabase.client) return;
+    const userId = this.auth.currentUser?.id;
+    if (!userId) return;
+
+    const { error } = await this.supabase.client
+      .from(DB_TABLE)
+      .upsert({
+        user_id: userId,
+        data: this.tree,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'user_id' });
+
+    if (error) throw error;
+  }
+
+  /** Load from cloud if logged in, else from localStorage */
   private load() {
+    if (this.auth.isLoggedIn()) {
+      this.loadFromCloud();
+    } else {
+      this.loadFromLocal();
+    }
+  }
+
+  async loadFromCloud(): Promise<void> {
+    if (!this.supabase.client) { this.loadFromLocal(); return; }
+    const userId = this.auth.currentUser?.id;
+    if (!userId) { this.loadFromLocal(); return; }
+
+    try {
+      const { data, error } = await this.supabase.client
+        .from(DB_TABLE)
+        .select('data')
+        .eq('user_id', userId)
+        .single();
+
+      if (error || !data) {
+        // Nothing in cloud yet — migrate localStorage data up
+        this.loadFromLocal();
+        if (this.tree.members.length > 0) {
+          await this.saveToCloud(); // push local data to cloud on first login
+        }
+        return;
+      }
+
+      this.tree = data['data'] as FamilyTree;
+      this.migrateGroups();
+      this.layoutAll();
+      this.tree$.next(this.tree);
+
+      // Also update local cache
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.tree));
+    } catch (err) {
+      console.warn('Cloud load failed, using local data:', err);
+      this.loadFromLocal();
+    }
+  }
+
+  private loadFromLocal(): void {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         this.tree = JSON.parse(raw);
-        // migrate old data without groups
-        if (!this.tree.groups) {
-          const g = this.makeGroup('My Family');
-          this.tree.groups = [g];
-          this.tree.activeGroupId = g.id;
-          this.tree.members.forEach(m => m.groupId = m.groupId || g.id);
-        }
+        this.migrateGroups();
         this.layoutAll();
       } else {
         this.seedDemo();
       }
     } catch { this.seedDemo(); }
     this.tree$.next(this.tree);
+  }
+
+  /** Migrate old data that lacks the 'groups' field */
+  private migrateGroups(): void {
+    if (!this.tree.groups) {
+      const g = this.makeGroup('My Family');
+      this.tree.groups = [g];
+      this.tree.activeGroupId = g.id;
+      this.tree.members.forEach(m => m.groupId = m.groupId || g.id);
+    }
   }
 
   // ── Seed demo ──────────────────────────────────────────────────────────────

@@ -9,19 +9,24 @@ import { CursiveWriteComponent } from './components/cursive-write/cursive-write.
 import { SudokuComponent } from './components/sudoku/sudoku.component';
 import { FamilyTreeComponent } from './pages/family-tree/family-tree.component';
 import { KidsPlannerComponent } from './pages/kids-planner/kids-planner.component';
+import { LoginComponent } from './pages/login/login.component';
+import { AuthGuard } from './guards/auth.guard';
 
 const routes: Routes = [
-  { path: 'about', component: AboutComponent },
-  { path: 'pdf-splitter', component: PdfSplitterComponent },
-  { path: 'pdf-merger', component: PdfMergerComponent },  // Add this line
-  { path: 'cursive-write', component: CursiveWriteComponent },  // Add this line
- 
-  { path: 'crossword-puzzle', component: CrosswordPuzzleComponent },
-  { path: 'sudoku', component: SudokuComponent },
-  { path: 'family-tree', component: FamilyTreeComponent },
-  { path: 'date-Converter', component: DateConverterComponent },  // Added
-  { path: 'kids-planner', component: KidsPlannerComponent },
-    
+  // ── Public ────────────────────────────────────────────────────────────────
+  { path: 'login', component: LoginComponent },
+
+  // ── Protected (whole app requires login) ──────────────────────────────────
+  { path: 'about',            component: AboutComponent,           canActivate: [AuthGuard] },
+  { path: 'pdf-splitter',     component: PdfSplitterComponent,     canActivate: [AuthGuard] },
+  { path: 'pdf-merger',       component: PdfMergerComponent,       canActivate: [AuthGuard] },
+  { path: 'cursive-write',    component: CursiveWriteComponent,    canActivate: [AuthGuard] },
+  { path: 'crossword-puzzle', component: CrosswordPuzzleComponent, canActivate: [AuthGuard] },
+  { path: 'sudoku',           component: SudokuComponent,          canActivate: [AuthGuard] },
+  { path: 'date-Converter',   component: DateConverterComponent,   canActivate: [AuthGuard] },
+  { path: 'family-tree',      component: FamilyTreeComponent,      canActivate: [AuthGuard] },
+  { path: 'kids-planner',     component: KidsPlannerComponent,     canActivate: [AuthGuard] },
+
   { path: '', redirectTo: 'about', pathMatch: 'full' }
 ];
 

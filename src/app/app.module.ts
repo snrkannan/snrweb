@@ -3,6 +3,7 @@ import { BrowserModule } from '@angular/platform-browser';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
+import { CommonModule } from '@angular/common';
 
 // Material Modules
 import { MatToolbarModule } from '@angular/material/toolbar';
@@ -36,7 +37,9 @@ import { CursiveWriteComponent } from './components/cursive-write/cursive-write.
 import { SudokuComponent } from './components/sudoku/sudoku.component';
 import { FamilyTreeComponent } from './pages/family-tree/family-tree.component';
 import { KidsPlannerComponent } from './pages/kids-planner/kids-planner.component';
+import { LoginComponent } from './pages/login/login.component';
 import { provideHttpClient } from '@angular/common/http';
+import { AuthGuard } from './guards/auth.guard';
 
 @NgModule({
   declarations: [
@@ -55,10 +58,12 @@ import { provideHttpClient } from '@angular/common/http';
     CursiveWriteComponent,
     SudokuComponent,
     FamilyTreeComponent,
-    KidsPlannerComponent
+    KidsPlannerComponent,
+    LoginComponent
   ],
   imports: [
     BrowserModule,
+    CommonModule,
     AppRoutingModule,
     BrowserAnimationsModule,
     FormsModule,
@@ -76,7 +81,7 @@ import { provideHttpClient } from '@angular/common/http';
     CdkTreeModule,
     MatTreeModule
   ],
-  providers: [provideHttpClient(),],
+  providers: [provideHttpClient(), AuthGuard],
   bootstrap: [AppComponent]
 })
 export class AppModule { }
