@@ -46,7 +46,7 @@ export class KidsPlannerPdfService {
       if (idx > 0) doc.addPage();
       this.fillPageBg(doc, pw, ph);
       const dayTasks = tasks.filter(t => t.days.includes(day));
-      this.drawPageHeader(doc, pw, `${day}  —  Daily Planner`, opts.childName);
+      this.drawPageHeader(doc, pw, `${day} - Daily Planner`, opts.childName);
       this.drawTaskList(doc, pw, ph, dayTasks, 40);
       this.drawFooter(doc, pw, ph, `${opts.childName}'s Daily Schedule  ·  ${day}`);
     });
@@ -100,7 +100,7 @@ export class KidsPlannerPdfService {
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(6);
         doc.setTextColor(...BODY_TEXT);
-        const label = doc.splitTextToSize(`${meta.emoji} ${task.title}`, colW - 9);
+        const label = doc.splitTextToSize(this.stripEmoji(`${meta.label}: ${task.title}`), colW - 9);
         doc.text(label[0], x + 2, y + 3.2);
 
         // Time (AM/PM)
@@ -140,7 +140,7 @@ export class KidsPlannerPdfService {
     const monthName  = monthNames[opts.selectedMonth];
 
     this.fillPageBg(doc, pw, ph);
-    this.drawPageHeader(doc, pw, `${monthName} ${opts.selectedYear}  —  Monthly Planner`, opts.childName, true);
+    this.drawPageHeader(doc, pw, `${monthName} ${opts.selectedYear} - Monthly Planner`, opts.childName, true);
 
     const firstDay    = new Date(opts.selectedYear, opts.selectedMonth, 1);
     const daysInMonth = new Date(opts.selectedYear, opts.selectedMonth + 1, 0).getDate();
@@ -198,7 +198,7 @@ export class KidsPlannerPdfService {
           doc.setFont('helvetica', 'normal');
           doc.setFontSize(4.5);
           doc.setTextColor(...BODY_TEXT);
-          const lbl = doc.splitTextToSize(`${meta.emoji} ${task.title}`, cellW - 10);
+          const lbl = doc.splitTextToSize(this.stripEmoji(task.title), cellW - 10);
           doc.text(lbl[0], cx + 2.5, ty + 3);
 
           // Small checkbox circle
@@ -229,7 +229,7 @@ export class KidsPlannerPdfService {
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(5.5);
       doc.setTextColor(80, 80, 100);
-      doc.text(`${meta.emoji} ${meta.label}`, lx + 4, ly - 0.5);
+      doc.text(meta.label, lx + 4, ly - 0.5);
       lx += 24;
     });
 
@@ -321,7 +321,7 @@ export class KidsPlannerPdfService {
     doc.setFontSize(7);
     doc.setTextColor(...FOOTER_COL);
     doc.text(
-      '✏️  Fill in tasks and tick the circle when done  ·  Print as many copies as you need',
+      'Fill in tasks and tick the circle when done  |  Print as many copies as you need',
       pw / 2, ph - 5, { align: 'center' }
     );
     doc.setFont('helvetica', 'normal');
@@ -332,141 +332,135 @@ export class KidsPlannerPdfService {
   }
 
   // ── Grid Timetable ────────────────────────────────────────────────────────────
-  // X-axis = Days (Mon–Sun)   |   Y-axis = Time (6 AM – 10 PM, hourly slots)
+  // Y-axis = Days (Mon–Sun, rows)  |  X-axis = Time (6 AM – 10 PM, columns)
   private buildGrid(tasks: KidsTask[], opts: KidsPdfOptions): void {
     const doc = new jsPDF('landscape', 'mm', 'a4');
-    const pw  = doc.internal.pageSize.getWidth();   // 297mm
-    const ph  = doc.internal.pageSize.getHeight();  // 210mm
+    const pw  = doc.internal.pageSize.getWidth();   // 297 mm
+    const ph  = doc.internal.pageSize.getHeight();  // 210 mm
+
 
     this.fillPageBg(doc, pw, ph);
     this.drawPageHeader(doc, pw, 'Weekly Timetable Grid', opts.childName, true);
 
     // ── Layout constants ──────────────────────────────────────────────────────
-    const marginL   = 14;
-    const marginR   = 10;
-    const timeColW  = 20;           // left column for hour labels
-    const gridX     = marginL + timeColW;
-    const gridTop   = 33;           // below header band
-    const dayHdrH   = 9;            // day-name header row height
-    const footerH   = 12;
-    const gridH     = ph - gridTop - dayHdrH - footerH;
+    const marginL    = 14;
+    const marginR    = 10;
+    const headerH    = 30;   // height consumed by drawPageHeader band
+    const footerH    = 14;
+    const dayLabelW  = 20;   // left column for day name labels
+    const timeHdrH   = 9;    // top row for time labels
 
-    const startHour  = 6;           // 6 AM
-    const endHour    = 22;          // 10 PM
+    const startHour  = 6;
+    const endHour    = 22;
     const totalHours = endHour - startHour;   // 16 slots
-    const hourH      = gridH / totalHours;    // px per hour
 
-    const dayColW   = (pw - marginL - marginR - timeColW) / 7;
-    const rowsY     = gridTop + dayHdrH;      // where time rows begin
+    // Grid geometry
+    const gridX   = marginL + dayLabelW;                        // time columns start
+    const gridW   = pw - marginL - marginR - dayLabelW;         // total time-axis width
+    const hourW   = gridW / totalHours;                         // width per 1-hr slot
+    const gridTop = headerH + timeHdrH;                         // y where day rows begin
+    const gridH   = ph - headerH - timeHdrH - footerH;          // total height for 7 rows
+    const dayRowH = gridH / 7;                                  // height per day row
 
-    // ── Day column header row ─────────────────────────────────────────────────
-    DAYS.forEach((day, i) => {
-      const x = gridX + i * dayColW;
-      doc.setFillColor(...DAY_HDR_BG);
-      doc.roundedRect(x + 0.5, gridTop, dayColW - 1, dayHdrH - 0.5, 1.5, 1.5, 'F');
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(8.5);
-      doc.setTextColor(...DAY_HDR_TEXT);
-      doc.text(day, x + dayColW / 2, gridTop + 6, { align: 'center' });
-    });
+    // ── Background tint for day label column ─────────────────────────────────
+    doc.setFillColor(...DAY_HDR_BG);
+    doc.rect(marginL, gridTop, dayLabelW, gridH, 'F');
 
-    // ── Alternating hour-row background tints ─────────────────────────────────
-    for (let h = 0; h < totalHours; h++) {
-      const y = rowsY + h * hourH;
-      if (h % 2 === 0) {
-        doc.setFillColor(245, 248, 255);
-      } else {
-        doc.setFillColor(250, 252, 255);
-      }
-      doc.rect(gridX, y, pw - marginL - marginR - timeColW, hourH, 'F');
+    // ── Alternating day-row tints (time-column area only) ─────────────────────
+    for (let r = 0; r < 7; r++) {
+      const rowY = gridTop + r * dayRowH;
+      doc.setFillColor(r % 2 === 0 ? 245 : 250, r % 2 === 0 ? 248 : 252, 255);
+      doc.rect(gridX, rowY, gridW, dayRowH, 'F');
     }
 
-    // ── Horizontal grid lines + hour labels ───────────────────────────────────
+    // ── Vertical hour lines + time header labels ──────────────────────────────
     for (let h = 0; h <= totalHours; h++) {
-      const y = rowsY + h * hourH;
+      const x    = gridX + h * hourW;
       const hour = startHour + h;
 
-      // Grid line
-      doc.setDrawColor(210, 220, 235);
-      doc.setLineWidth(h === 0 || h === totalHours ? 0.5 : (hour % 2 === 0 ? 0.3 : 0.15));
-      doc.line(marginL, y, pw - marginR, y);
+      // Vertical grid line (bolder on full hours, lighter on halves)
+      doc.setDrawColor(200, 215, 235);
+      doc.setLineWidth(h === 0 || h === totalHours ? 0.6 : (h % 2 === 0 ? 0.3 : 0.15));
+      doc.line(x, headerH, x, gridTop + gridH);
 
       if (h < totalHours) {
-        // Hour label (left time column)
+        // Hour label above the grid
         const label = this.formatTime(`${hour.toString().padStart(2, '0')}:00`);
         doc.setFont('helvetica', h % 2 === 0 ? 'bold' : 'normal');
         doc.setFontSize(5.5);
         doc.setTextColor(...META_TEXT);
-        doc.text(label, marginL + timeColW - 2, y + 3.8, { align: 'right' });
+        doc.text(label, x + hourW / 2, headerH + timeHdrH - 2, { align: 'center' });
 
-        // Half-hour tick (dashed lighter line)
-        const hy = y + hourH / 2;
+        // Half-hour tick line
+        const hx = x + hourW / 2;
         doc.setDrawColor(225, 232, 245);
         doc.setLineWidth(0.1);
-        doc.line(gridX, hy, pw - marginR, hy);
+        doc.line(hx, gridTop, hx, gridTop + gridH);
       }
     }
 
-    // ── Vertical column dividers ───────────────────────────────────────────────
-    for (let i = 0; i <= 7; i++) {
-      const x = gridX + i * dayColW;
+    // ── Horizontal row dividers + day name labels ─────────────────────────────
+    DAYS.forEach((day, rowIdx) => {
+      const rowY = gridTop + rowIdx * dayRowH;
+
+      // Row divider
       doc.setDrawColor(200, 215, 235);
-      doc.setLineWidth(i === 0 || i === 7 ? 0.5 : 0.25);
-      doc.line(x, gridTop, x, rowsY + totalHours * hourH);
-    }
+      doc.setLineWidth(rowIdx === 0 || rowIdx === 7 ? 0.6 : 0.3);
+      doc.line(marginL, rowY, pw - marginR, rowY);
 
-    // ── Time-column left border ────────────────────────────────────────────────
+      // Day name label (left column)
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(...DAY_HDR_TEXT);
+      doc.text(day, marginL + dayLabelW / 2, rowY + dayRowH / 2 + 3, { align: 'center' });
+    });
+
+    // Bottom border
     doc.setDrawColor(190, 210, 235);
-    doc.setLineWidth(0.5);
-    doc.line(gridX, gridTop, gridX, rowsY + totalHours * hourH);
+    doc.setLineWidth(0.6);
+    doc.line(marginL, gridTop + gridH, pw - marginR, gridTop + gridH);
 
-    // ── Task blocks ───────────────────────────────────────────────────────────
-    DAYS.forEach((day, colIdx) => {
-      const colX     = gridX + colIdx * dayColW;
+    // ── Task blocks (horizontal bars) ─────────────────────────────────────────
+    DAYS.forEach((day, rowIdx) => {
+      const rowY     = gridTop + rowIdx * dayRowH;
       const dayTasks = tasks
         .filter(t => t.days.includes(day))
         .sort((a, b) => a.startTime.localeCompare(b.startTime));
 
       if (!dayTasks.length) return;
 
-      // Detect overlaps — group concurrent tasks to split column width
-      // Simple approach: assign sub-columns based on overlap groups
+      // Detect time overlaps → assign vertical lanes within the row
       const placed: { task: KidsTask; lane: number; lanes: number }[] = [];
+
       dayTasks.forEach(task => {
         const [sh, sm] = task.startTime.split(':').map(Number);
         const [eh, em] = task.endTime.split(':').map(Number);
-        const tStart = sh + sm / 60;
-        const tEnd   = eh + em / 60;
+        const tStart   = sh + sm / 60;
+        const tEnd     = eh + em / 60;
 
-        // Find occupied lanes at this time
-        const occupiedLanes = new Set<number>();
+        const occupied = new Set<number>();
         placed.forEach(p => {
           const [psh, psm] = p.task.startTime.split(':').map(Number);
           const [peh, pem] = p.task.endTime.split(':').map(Number);
-          const pStart = psh + psm / 60;
-          const pEnd   = peh + pem / 60;
-          if (tStart < pEnd && tEnd > pStart) occupiedLanes.add(p.lane);
+          if (tStart < peh + pem / 60 && tEnd > psh + psm / 60) occupied.add(p.lane);
         });
         let lane = 0;
-        while (occupiedLanes.has(lane)) lane++;
-
+        while (occupied.has(lane)) lane++;
         placed.push({ task, lane, lanes: 1 });
       });
 
-      // Second pass: figure out max lanes per overlap group
-      placed.forEach((p, idx) => {
+      // Second pass: set max lanes per overlap group
+      placed.forEach((p, i) => {
         const [sh, sm] = p.task.startTime.split(':').map(Number);
         const [eh, em] = p.task.endTime.split(':').map(Number);
         const tStart = sh + sm / 60;
         const tEnd   = eh + em / 60;
         let maxLane = p.lane;
-        placed.forEach((q, qIdx) => {
-          if (qIdx === idx) return;
+        placed.forEach((q, j) => {
+          if (i === j) return;
           const [qsh, qsm] = q.task.startTime.split(':').map(Number);
           const [qeh, qem] = q.task.endTime.split(':').map(Number);
-          const qStart = qsh + qsm / 60;
-          const qEnd   = qeh + qem / 60;
-          if (tStart < qEnd && tEnd > qStart) maxLane = Math.max(maxLane, q.lane);
+          if (tStart < qeh + qem / 60 && tEnd > qsh + qsm / 60) maxLane = Math.max(maxLane, q.lane);
         });
         p.lanes = maxLane + 1;
       });
@@ -474,56 +468,77 @@ export class KidsPlannerPdfService {
       placed.forEach(({ task, lane, lanes }) => {
         const [sh, sm] = task.startTime.split(':').map(Number);
         const [eh, em] = task.endTime.split(':').map(Number);
-        const startOffset = (sh - startHour) + sm / 60;
-        const endOffset   = (eh - startHour) + em / 60;
+        const startOff = (sh - startHour) + sm / 60;
+        const endOff   = (eh - startHour) + em / 60;
 
-        // Skip tasks fully outside grid range
-        if (startOffset >= totalHours || endOffset <= 0) return;
+        if (startOff >= totalHours || endOff <= 0) return;
 
-        const clampedStart = Math.max(0, startOffset);
-        const clampedEnd   = Math.min(totalHours, endOffset);
-        const blockH       = (clampedEnd - clampedStart) * hourH;
-        if (blockH < 1) return;
+        const cStart  = Math.max(0, startOff);
+        const cEnd    = Math.min(totalHours, endOff);
+        const blockW  = (cEnd - cStart) * hourW;
+        if (blockW < 0.5) return;
 
-        const blockY = rowsY + clampedStart * hourH;
-        const subW   = (dayColW - 2) / lanes;
-        const blockX = colX + 1 + lane * subW;
+        // Horizontal bar position
+        const blockX  = gridX + cStart * hourW;
+        const laneH   = (dayRowH - 1) / lanes;
+        const blockY  = rowY + 0.5 + lane * laneH;
+        const blockH  = laneH - 0.5;
 
         const meta   = CATEGORY_META[task.category];
         const pastel = this.pastelOf(meta.color);
         const accent = this.accentOf(meta.color);
 
-        // Block fill (pastel)
+        // ── Block fill ──────────────────────────────────────────────────────
         doc.setFillColor(...pastel);
         doc.setDrawColor(...accent);
-        doc.setLineWidth(0.4);
-        doc.roundedRect(blockX, blockY + 0.4, subW - 0.5, blockH - 0.8, 1, 1, 'FD');
+        doc.setLineWidth(0.35);
+        doc.roundedRect(blockX + 0.3, blockY, blockW - 0.6, blockH, 1, 1, 'FD');
 
-        // Left accent bar
+        // ── Top accent stripe ────────────────────────────────────────────────
         doc.setFillColor(...accent);
-        doc.rect(blockX, blockY + 0.4, 1.8, blockH - 0.8, 'F');
+        doc.roundedRect(blockX + 0.3, blockY, blockW - 0.6, 2, 0.5, 0.5, 'F');
 
-        // Emoji + title (only if enough height)
-        if (blockH >= 5) {
-          doc.setFont('helvetica', 'bold');
-          doc.setFontSize(Math.min(6, blockH > 8 ? 6 : 5));
-          doc.setTextColor(...BODY_TEXT);
-          const maxW  = subW - 5;
-          const lines = doc.splitTextToSize(`${meta.emoji} ${task.title}`, maxW);
-          const lineH = blockH > 8 ? 3.8 : 3.2;
-          doc.text(lines[0], blockX + 3, blockY + 4.2);
-          if (lines[1] && blockH > 10) {
-            doc.text(lines[1], blockX + 3, blockY + 4.2 + lineH);
+        // ── Completion checkbox (right side, vertically centred) ─────────────
+        const cbSize = Math.min(5.5, blockH - 3);
+        if (cbSize >= 3.5 && blockW >= 10) {
+          const cbX = blockX + blockW - cbSize - 1.8;
+          const cbY = blockY + (blockH - cbSize) / 2;
+          doc.setFillColor(255, 255, 255);
+          doc.setDrawColor(150, 175, 210);
+          doc.setLineWidth(0.45);
+          doc.roundedRect(cbX, cbY, cbSize, cbSize, 0.8, 0.8, 'FD');
+          // Faint X guide lines
+          doc.setDrawColor(210, 225, 240);
+          doc.setLineWidth(0.2);
+          doc.line(cbX + 0.9, cbY + 0.9, cbX + cbSize - 0.9, cbY + cbSize - 0.9);
+          doc.line(cbX + cbSize - 0.9, cbY + 0.9, cbX + 0.9, cbY + cbSize - 0.9);
+        }
+
+        // ── Task title (always visible, bold & clear) ────────────────────────
+        const cbReserve  = (cbSize >= 3.5 && blockW >= 10) ? cbSize + 2.5 : 0;
+        const textMaxW   = blockW - 2.5 - cbReserve;
+        const fontSize   = blockH >= 14 ? 8 : blockH >= 9 ? 7 : 6;
+        const textStartY = blockY + 2.5 + fontSize * 0.35;  // below accent stripe
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(fontSize);
+        doc.setTextColor(...BODY_TEXT);
+
+        if (textMaxW > 4) {
+          const titleLines = doc.splitTextToSize(this.stripEmoji(task.title), textMaxW);
+          doc.text(titleLines[0], blockX + 1.8, textStartY);
+          if (titleLines[1] && blockH >= 14) {
+            doc.text(titleLines[1], blockX + 1.8, textStartY + fontSize * 0.45);
           }
         }
 
-        // Time range (only if block tall enough)
-        if (blockH >= 10) {
+        // ── Time range label (below title) ───────────────────────────────────
+        if (blockH >= 10 && blockW >= 14) {
           doc.setFont('helvetica', 'normal');
-          doc.setFontSize(4.5);
+          doc.setFontSize(5);
           doc.setTextColor(...META_TEXT);
-          const timeStr = `${this.formatTime(task.startTime)}–${this.formatTime(task.endTime)}`;
-          doc.text(timeStr, blockX + 3, blockY + blockH - 2.5);
+          const timeStr = `${this.formatTime(task.startTime)}-${this.formatTime(task.endTime)}`;
+          doc.text(timeStr, blockX + 1.8, blockY + blockH - 1.8);
         }
       });
     });
@@ -548,7 +563,7 @@ export class KidsPlannerPdfService {
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(5.5);
       doc.setTextColor(70, 80, 110);
-      doc.text(`${meta.emoji} ${meta.label}`, lx + 4.5, ly - 0.3);
+      doc.text(meta.label, lx + 4.5, ly - 0.3);
       lx += 26;
     });
 
@@ -604,7 +619,7 @@ export class KidsPlannerPdfService {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
     doc.setTextColor(100, 130, 180);
-    doc.text(`${childName}'s Schedule  ·  Schedule · Organise · Achieve ✨`, pw / 2, 23, { align: 'center' });
+    doc.text(`${childName}'s Schedule  -  Schedule, Organise, Achieve!`, pw / 2, 23, { align: 'center' });
 
     doc.setTextColor(...BODY_TEXT);
   }
@@ -621,7 +636,7 @@ export class KidsPlannerPdfService {
       doc.setFont('helvetica', 'italic');
       doc.setFontSize(11);
       doc.setTextColor(180, 190, 200);
-      doc.text('No tasks scheduled for this day  🎉', pw / 2, y + 12, { align: 'center' });
+      doc.text('No tasks scheduled for this day  :)', pw / 2, y + 12, { align: 'center' });
       doc.setTextColor(...BODY_TEXT);
       return;
     }
@@ -657,7 +672,7 @@ export class KidsPlannerPdfService {
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(11);
       doc.setTextColor(...BODY_TEXT);
-      doc.text(`${meta.emoji}  ${task.title}`, marginX + 32, y + 6);
+      doc.text(this.stripEmoji(task.title), marginX + 32, y + 6);
 
       // Time AM/PM (right-aligned, leave room for action boxes)
       doc.setFont('helvetica', 'normal');
@@ -705,7 +720,7 @@ export class KidsPlannerPdfService {
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8);
       doc.setTextColor(180, 160, 60);
-      doc.text('✏', box2X + boxW / 2, boxY + boxH / 2 + 1.5, { align: 'center' });
+      doc.text('*', box2X + boxW / 2, boxY + boxH / 2 + 1.5, { align: 'center' });
       doc.setFont('courier', 'italic');
       doc.setFontSize(4.8);
       doc.text('edit', box2X + boxW / 2, boxY + boxH - 1.2, { align: 'center' });
@@ -717,7 +732,7 @@ export class KidsPlannerPdfService {
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(9);
       doc.setTextColor(210, 100, 100);
-      doc.text('✕', box3X + boxW / 2, boxY + boxH / 2 + 1.8, { align: 'center' });
+      doc.text('X', box3X + boxW / 2, boxY + boxH / 2 + 1.8, { align: 'center' });
       doc.setFont('courier', 'italic');
       doc.setFontSize(4.8);
       doc.setTextColor(200, 140, 140);
@@ -757,5 +772,20 @@ export class KidsPlannerPdfService {
     const g = parseInt(hex.slice(3, 5), 16);
     const b = parseInt(hex.slice(5, 7), 16);
     return [r, g, b];
+  }
+
+  /**
+   * Remove emoji and other non-Latin-1 characters that jsPDF's built-in
+   * Helvetica font cannot render (they show as garbage like "Ø=ÜÚ").
+   */
+  private stripEmoji(text: string): string {
+    // Remove anything outside the Basic Latin + Latin-1 Supplement ranges
+    return text
+      .replace(/[\u{1F000}-\u{1FFFF}]/gu, '') // emoji blocks
+      .replace(/[\u2600-\u27FF]/gu, '')         // misc symbols, dingbats
+      .replace(/[\u{1F900}-\u{1F9FF}]/gu, '')  // supplemental symbols
+      .replace(/[\uFE0F]/gu, '')               // variation selectors
+      .replace(/[\u200D]/gu, '')               // zero-width joiners
+      .trim();
   }
 }

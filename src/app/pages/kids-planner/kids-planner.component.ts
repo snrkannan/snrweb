@@ -45,6 +45,9 @@ export class KidsPlannerComponent implements OnInit {
   readonly YEARS = [2024, 2025, 2026, 2027, 2028];
   readonly PRIORITIES: Array<'low'|'medium'|'high'> = ['low','medium','high'];
 
+  /** Hours shown in the timetable grid (6 AM → 10 PM) */
+  readonly TIME_SLOTS: number[] = Array.from({ length: 17 }, (_, i) => i + 6);
+
   get filteredTasks(): KidsTask[] {
     if (this.filteredDay === 'All') return this.tasks;
     return this.tasks.filter(t => t.days.includes(this.filteredDay as DayOfWeek));
@@ -108,6 +111,18 @@ export class KidsPlannerComponent implements OnInit {
     return (this.form.days as DayOfWeek[]).includes(day);
   }
 
+  areAllDaysSelected(): boolean {
+    return (this.form.days as DayOfWeek[]).length === DAYS.length;
+  }
+
+  toggleAllDays(): void {
+    if (this.areAllDaysSelected()) {
+      (this.form.days as DayOfWeek[]).splice(0);
+    } else {
+      this.form.days = [...DAYS];
+    }
+  }
+
   selectCategory(cat: TaskCategory): void {
     this.form.category = cat;
     this.form.emoji   = CATEGORY_META[cat].emoji;
@@ -160,6 +175,25 @@ export class KidsPlannerComponent implements OnInit {
   getCategoryMeta(cat: TaskCategory) { return CATEGORY_META[cat]; }
   getPriorityIcon(p: string): string {
     return p === 'high' ? '🔴' : p === 'medium' ? '🟡' : '🟢';
+  }
+
+  /**
+   * Returns tasks for a given day that START within the given hour slot.
+   * e.g. hour=9 captures tasks with startTime between 09:00 and 09:59.
+   */
+  getTasksForSlot(day: DayOfWeek, hour: number): KidsTask[] {
+    return this.tasks.filter(t => {
+      if (!t.days.includes(day)) return false;
+      const h = parseInt(t.startTime.split(':')[0], 10);
+      return h === hour;
+    }).sort((a, b) => a.startTime.localeCompare(b.startTime));
+  }
+
+  /** Format hour number to display label, e.g. 9 → '9 AM', 13 → '1 PM' */
+  formatHour(hour: number): string {
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const h = hour % 12 || 12;
+    return `${h} ${ampm}`;
   }
 
   /** Convert "HH:MM" (24-hr) to "H:MM AM/PM" (12-hr) */
