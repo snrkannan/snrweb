@@ -84,7 +84,9 @@ export class KidsPlannerPdfService {
     // Task rows per column
     DAYS.forEach((day, i) => {
       const x        = 14 + i * colW;
-      const dayTasks = tasks.filter(t => t.days.includes(day));
+      const dayTasks = tasks
+        .filter(t => t.days.includes(day))
+        .sort((a, b) => a.startTime.localeCompare(b.startTime));
       let y          = startY + 12;
 
       dayTasks.slice(0, maxRows).forEach(task => {
@@ -98,10 +100,10 @@ export class KidsPlannerPdfService {
 
         // Title
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(6);
+        doc.setFontSize(8);
         doc.setTextColor(...BODY_TEXT);
-        const label = doc.splitTextToSize(this.stripEmoji(`${meta.label}: ${task.title}`), colW - 9);
-        doc.text(label[0], x + 2, y + 3.2);
+        const label = doc.splitTextToSize(this.stripEmoji(task.title), colW - 9);
+        doc.text(label[0], x + 2, y + 3.5);
 
         // Time (AM/PM)
         doc.setFont('helvetica', 'normal');
@@ -332,104 +334,131 @@ export class KidsPlannerPdfService {
   }
 
   // ── Grid Timetable ────────────────────────────────────────────────────────────
-  // Y-axis = Days (Mon–Sun, rows)  |  X-axis = Time (6 AM – 10 PM, columns)
+  // X-axis = Days (Sun–Sat, columns)  |  Y-axis = Time (dynamic range, rows)
+  // hourRowH is scaled so the shortest task always gets a fully readable box.
   private buildGrid(tasks: KidsTask[], opts: KidsPdfOptions): void {
-    const doc = new jsPDF('landscape', 'mm', 'a4');
-    const pw  = doc.internal.pageSize.getWidth();   // 297 mm
-    const ph  = doc.internal.pageSize.getHeight();  // 210 mm
 
+    // ── Layout constants ──────────────────────────────────────────────────────
+    const PAGE_W     = 297;  // A4 landscape width (mm)
+    const marginL    = 14;
+    const marginR    = 10;
+    const headerH    = 30;
+    const footerH    = 14;
+    const timeLabelW = 18;   // left column for time labels
+    const dayHdrH    = 10;   // top row for day column headers
+    const MIN_BOX_H  = 13;   // guaranteed minimum height per task block (mm)
+
+    // ── Dynamic time range from actual tasks ──────────────────────────────────
+    let minHour = 23, maxHour = 1;
+    let minDurationH = 24;   // minimum task duration in hours
+
+    tasks.forEach(task => {
+      const [sh, sm] = task.startTime.split(':').map(Number);
+      const [eh, em] = task.endTime.split(':').map(Number);
+      const tStart = sh + sm / 60;
+      const tEnd   = eh + em / 60;
+      const dur    = tEnd - tStart;
+      if (sh < minHour) minHour = sh;
+      // ceil the end hour so the row spans to the next full hour
+      const ehCeil = em > 0 ? eh + 1 : eh;
+      if (ehCeil > maxHour) maxHour = ehCeil;
+      if (dur > 0 && dur < minDurationH) minDurationH = dur;
+    });
+
+    if (tasks.length === 0) { minHour = 6; maxHour = 22; minDurationH = 1; }
+
+    // 1-hour padding on each side, clamped to 0–24
+    const startHour  = Math.max(0, minHour - 1);
+    const endHour    = Math.min(24, maxHour + 1);
+    const totalHours = endHour - startHour;
+
+    // ── hourRowH: large enough so shortest task always fills MIN_BOX_H ────────
+    const defaultHourRowH = (210 - headerH - dayHdrH - footerH) / totalHours;
+    const minHourRowH     = MIN_BOX_H / minDurationH;   // ensures min block ≥ MIN_BOX_H
+    const hourRowH        = Math.max(defaultHourRowH, minHourRowH);
+
+    // ── Custom page height (may be taller than standard A4 landscape) ─────────
+    const gridH   = totalHours * hourRowH;
+    const PAGE_H  = headerH + dayHdrH + gridH + footerH;
+
+    // Create document with custom size
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: [PAGE_H, PAGE_W] });
+    const pw  = doc.internal.pageSize.getWidth();   // = PAGE_W
+    const ph  = doc.internal.pageSize.getHeight();  // = PAGE_H
 
     this.fillPageBg(doc, pw, ph);
     this.drawPageHeader(doc, pw, 'Weekly Timetable Grid', opts.childName, true);
 
-    // ── Layout constants ──────────────────────────────────────────────────────
-    const marginL    = 14;
-    const marginR    = 10;
-    const headerH    = 30;   // height consumed by drawPageHeader band
-    const footerH    = 14;
-    const dayLabelW  = 20;   // left column for day name labels
-    const timeHdrH   = 9;    // top row for time labels
-
-    const startHour  = 6;
-    const endHour    = 22;
-    const totalHours = endHour - startHour;   // 16 slots
-
     // Grid geometry
-    const gridX   = marginL + dayLabelW;                        // time columns start
-    const gridW   = pw - marginL - marginR - dayLabelW;         // total time-axis width
-    const hourW   = gridW / totalHours;                         // width per 1-hr slot
-    const gridTop = headerH + timeHdrH;                         // y where day rows begin
-    const gridH   = ph - headerH - timeHdrH - footerH;          // total height for 7 rows
-    const dayRowH = gridH / 7;                                  // height per day row
+    const gridX    = marginL + timeLabelW;
+    const gridW    = pw - marginL - marginR - timeLabelW;
+    const colW     = gridW / 7;
+    const gridTop  = headerH + dayHdrH;
 
-    // ── Background tint for day label column ─────────────────────────────────
+    // ── Background tint for time-label column ─────────────────────────────────
     doc.setFillColor(...DAY_HDR_BG);
-    doc.rect(marginL, gridTop, dayLabelW, gridH, 'F');
+    doc.rect(marginL, gridTop, timeLabelW, gridH, 'F');
 
-    // ── Alternating day-row tints (time-column area only) ─────────────────────
-    for (let r = 0; r < 7; r++) {
-      const rowY = gridTop + r * dayRowH;
-      doc.setFillColor(r % 2 === 0 ? 245 : 250, r % 2 === 0 ? 248 : 252, 255);
-      doc.rect(gridX, rowY, gridW, dayRowH, 'F');
+    // ── Alternating column tints ──────────────────────────────────────────────
+    for (let c = 0; c < 7; c++) {
+      const cx = gridX + c * colW;
+      doc.setFillColor(c % 2 === 0 ? 245 : 250, c % 2 === 0 ? 248 : 252, 255);
+      doc.rect(cx, gridTop, colW, gridH, 'F');
     }
 
-    // ── Vertical hour lines + time header labels ──────────────────────────────
-    for (let h = 0; h <= totalHours; h++) {
-      const x    = gridX + h * hourW;
-      const hour = startHour + h;
-
-      // Vertical grid line (bolder on full hours, lighter on halves)
-      doc.setDrawColor(200, 215, 235);
-      doc.setLineWidth(h === 0 || h === totalHours ? 0.6 : (h % 2 === 0 ? 0.3 : 0.15));
-      doc.line(x, headerH, x, gridTop + gridH);
-
-      if (h < totalHours) {
-        // Hour label above the grid
-        const label = this.formatTime(`${hour.toString().padStart(2, '0')}:00`);
-        doc.setFont('helvetica', h % 2 === 0 ? 'bold' : 'normal');
-        doc.setFontSize(5.5);
-        doc.setTextColor(...META_TEXT);
-        doc.text(label, x + hourW / 2, headerH + timeHdrH - 2, { align: 'center' });
-
-        // Half-hour tick line
-        const hx = x + hourW / 2;
-        doc.setDrawColor(225, 232, 245);
-        doc.setLineWidth(0.1);
-        doc.line(hx, gridTop, hx, gridTop + gridH);
-      }
-    }
-
-    // ── Horizontal row dividers + day name labels ─────────────────────────────
-    DAYS.forEach((day, rowIdx) => {
-      const rowY = gridTop + rowIdx * dayRowH;
-
-      // Row divider
-      doc.setDrawColor(200, 215, 235);
-      doc.setLineWidth(rowIdx === 0 || rowIdx === 7 ? 0.6 : 0.3);
-      doc.line(marginL, rowY, pw - marginR, rowY);
-
-      // Day name label (left column)
+    // ── Day column headers ────────────────────────────────────────────────────
+    DAYS.forEach((day, i) => {
+      const cx = gridX + i * colW;
+      doc.setFillColor(...DAY_HDR_BG);
+      doc.roundedRect(cx + 0.5, headerH + 1, colW - 1, dayHdrH - 2, 1.5, 1.5, 'F');
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(9);
       doc.setTextColor(...DAY_HDR_TEXT);
-      doc.text(day, marginL + dayLabelW / 2, rowY + dayRowH / 2 + 3, { align: 'center' });
+      doc.text(day, cx + colW / 2, headerH + dayHdrH - 2.5, { align: 'center' });
     });
 
-    // Bottom border
-    doc.setDrawColor(190, 210, 235);
-    doc.setLineWidth(0.6);
-    doc.line(marginL, gridTop + gridH, pw - marginR, gridTop + gridH);
+    // ── Horizontal hour lines + time labels ───────────────────────────────────
+    for (let h = 0; h <= totalHours; h++) {
+      const y    = gridTop + h * hourRowH;
+      const hour = startHour + h;
 
-    // ── Task blocks (horizontal bars) ─────────────────────────────────────────
-    DAYS.forEach((day, rowIdx) => {
-      const rowY     = gridTop + rowIdx * dayRowH;
+      doc.setDrawColor(200, 215, 235);
+      doc.setLineWidth(h === 0 || h === totalHours ? 0.6 : 0.25);
+      doc.line(marginL, y, pw - marginR, y);
+
+      if (h < totalHours) {
+        const label = this.formatTime(`${hour.toString().padStart(2, '0')}:00`);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(6);
+        doc.setTextColor(...META_TEXT);
+        doc.text(label, marginL + timeLabelW - 1.5, y + 2.8);
+
+        // Half-hour guide line
+        const hy = y + hourRowH / 2;
+        doc.setDrawColor(225, 232, 245);
+        doc.setLineWidth(0.1);
+        doc.line(gridX, hy, pw - marginR, hy);
+      }
+    }
+
+    // ── Vertical column dividers ──────────────────────────────────────────────
+    for (let c = 0; c <= 7; c++) {
+      const cx = gridX + c * colW;
+      doc.setDrawColor(200, 215, 235);
+      doc.setLineWidth(c === 0 || c === 7 ? 0.6 : 0.25);
+      doc.line(cx, headerH, cx, gridTop + gridH);
+    }
+
+    // ── Task blocks ───────────────────────────────────────────────────────────
+    DAYS.forEach((day, colIdx) => {
+      const colX     = gridX + colIdx * colW;
       const dayTasks = tasks
         .filter(t => t.days.includes(day))
         .sort((a, b) => a.startTime.localeCompare(b.startTime));
 
       if (!dayTasks.length) return;
 
-      // Detect time overlaps → assign vertical lanes within the row
+      // Detect overlapping tasks → horizontal lanes within column
       const placed: { task: KidsTask; lane: number; lanes: number }[] = [];
 
       dayTasks.forEach(task => {
@@ -449,7 +478,7 @@ export class KidsPlannerPdfService {
         placed.push({ task, lane, lanes: 1 });
       });
 
-      // Second pass: set max lanes per overlap group
+      // Second pass: resolve max lanes per overlap group
       placed.forEach((p, i) => {
         const [sh, sm] = p.task.startTime.split(':').map(Number);
         const [eh, em] = p.task.endTime.split(':').map(Number);
@@ -473,78 +502,88 @@ export class KidsPlannerPdfService {
 
         if (startOff >= totalHours || endOff <= 0) return;
 
-        const cStart  = Math.max(0, startOff);
-        const cEnd    = Math.min(totalHours, endOff);
-        const blockW  = (cEnd - cStart) * hourW;
-        if (blockW < 0.5) return;
+        const cStart = Math.max(0, startOff);
+        const cEnd   = Math.min(totalHours, endOff);
+        const blockH = (cEnd - cStart) * hourRowH;   // ≥ MIN_BOX_H guaranteed
+        if (blockH < 1) return;
 
-        // Horizontal bar position
-        const blockX  = gridX + cStart * hourW;
-        const laneH   = (dayRowH - 1) / lanes;
-        const blockY  = rowY + 0.5 + lane * laneH;
-        const blockH  = laneH - 0.5;
+        const blockY  = gridTop + cStart * hourRowH;
+        const laneW   = (colW - 1) / lanes;
+        const blockX  = colX + 0.5 + lane * laneW;
+        const blockW  = laneW - 0.5;
 
         const meta   = CATEGORY_META[task.category];
         const pastel = this.pastelOf(meta.color);
         const accent = this.accentOf(meta.color);
 
-        // ── Block fill ──────────────────────────────────────────────────────
+        // ── Block background ─────────────────────────────────────────────────
+        const cornerR = Math.min(1.5, blockH / 5, blockW / 5);
         doc.setFillColor(...pastel);
         doc.setDrawColor(...accent);
-        doc.setLineWidth(0.35);
-        doc.roundedRect(blockX + 0.3, blockY, blockW - 0.6, blockH, 1, 1, 'FD');
+        doc.setLineWidth(0.4);
+        doc.roundedRect(blockX, blockY + 0.4, blockW, blockH - 0.8, cornerR, cornerR, 'FD');
 
-        // ── Top accent stripe ────────────────────────────────────────────────
+        // ── Left accent stripe ───────────────────────────────────────────────
+        const stripeW = Math.min(2.5, blockW * 0.18);
         doc.setFillColor(...accent);
-        doc.roundedRect(blockX + 0.3, blockY, blockW - 0.6, 2, 0.5, 0.5, 'F');
+        doc.roundedRect(blockX, blockY + 0.4, stripeW, blockH - 0.8, cornerR, cornerR, 'F');
 
-        // ── Completion checkbox (right side, vertically centred) ─────────────
-        const cbSize = Math.min(5.5, blockH - 3);
-        if (cbSize >= 3.5 && blockW >= 10) {
-          const cbX = blockX + blockW - cbSize - 1.8;
-          const cbY = blockY + (blockH - cbSize) / 2;
-          doc.setFillColor(255, 255, 255);
-          doc.setDrawColor(150, 175, 210);
-          doc.setLineWidth(0.45);
-          doc.roundedRect(cbX, cbY, cbSize, cbSize, 0.8, 0.8, 'FD');
-          // Faint X guide lines
-          doc.setDrawColor(210, 225, 240);
-          doc.setLineWidth(0.2);
-          doc.line(cbX + 0.9, cbY + 0.9, cbX + cbSize - 0.9, cbY + cbSize - 0.9);
-          doc.line(cbX + cbSize - 0.9, cbY + 0.9, cbX + 0.9, cbY + cbSize - 0.9);
-        }
+        // ── Checkbox (always shown, right side, vertically centred) ──────────
+        const cbSize = Math.min(5, blockW * 0.18, blockH * 0.4);
+        const cbX    = blockX + blockW - cbSize - 1.5;
+        const cbY    = blockY + (blockH - cbSize) / 2;
+        doc.setFillColor(255, 255, 255);
+        doc.setDrawColor(140, 170, 210);
+        doc.setLineWidth(0.45);
+        doc.roundedRect(cbX, cbY, cbSize, cbSize, 0.7, 0.7, 'FD');
+        // Faint X guide marks
+        doc.setDrawColor(210, 225, 240);
+        doc.setLineWidth(0.2);
+        const cbPad = 0.9;
+        doc.line(cbX + cbPad, cbY + cbPad, cbX + cbSize - cbPad, cbY + cbSize - cbPad);
+        doc.line(cbX + cbSize - cbPad, cbY + cbPad, cbX + cbPad, cbY + cbSize - cbPad);
 
-        // ── Task title (always visible, bold & clear) ────────────────────────
-        const cbReserve  = (cbSize >= 3.5 && blockW >= 10) ? cbSize + 2.5 : 0;
-        const textMaxW   = blockW - 2.5 - cbReserve;
-        const fontSize   = blockH >= 14 ? 8 : blockH >= 9 ? 7 : 6;
-        const textStartY = blockY + 2.5 + fontSize * 0.35;  // below accent stripe
+        // ── Text area (between stripe and checkbox) ───────────────────────────
+        const textX    = blockX + stripeW + 1.2;
+        const textMaxW = blockX + blockW - cbSize - 2.5 - textX;  // leave room for cb
+        const titleText = this.stripEmoji(task.title);
+        const timeStr   = `${this.formatTime(task.startTime)}–${this.formatTime(task.endTime)}`;
+
+        // Font sizes — fixed so all boxes render consistently
+        const titleFS   = 6.5;
+        const timeFS    = 5;
+        const lSpacing  = titleFS * 0.42;
+
+        // Time row height (pinned at bottom)
+        const timeRowH_ = timeFS * 0.42 + 1.5;
+        const titleAreaH = (blockH - 0.8) - timeRowH_ - 1;
+        const maxLines   = Math.max(1, Math.floor(titleAreaH / lSpacing));
+        const titleLines = doc.splitTextToSize(titleText, textMaxW);
+        const linesToDraw = Math.min(titleLines.length, maxLines);
+
+        // Vertically centre title within its area
+        const titleBlockH = linesToDraw * lSpacing;
+        const ty0 = (blockY + 0.4) + (titleAreaH - titleBlockH) / 2 + titleFS * 0.35;
 
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(fontSize);
+        doc.setFontSize(titleFS);
         doc.setTextColor(...BODY_TEXT);
-
-        if (textMaxW > 4) {
-          const titleLines = doc.splitTextToSize(this.stripEmoji(task.title), textMaxW);
-          doc.text(titleLines[0], blockX + 1.8, textStartY);
-          if (titleLines[1] && blockH >= 14) {
-            doc.text(titleLines[1], blockX + 1.8, textStartY + fontSize * 0.45);
-          }
+        for (let li = 0; li < linesToDraw; li++) {
+          doc.text(titleLines[li], textX, ty0 + li * lSpacing);
         }
 
-        // ── Time range label (below title) ───────────────────────────────────
-        if (blockH >= 10 && blockW >= 14) {
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(5);
-          doc.setTextColor(...META_TEXT);
-          const timeStr = `${this.formatTime(task.startTime)}-${this.formatTime(task.endTime)}`;
-          doc.text(timeStr, blockX + 1.8, blockY + blockH - 1.8);
-        }
+        // Time range — always pinned to the bottom of the block
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(timeFS);
+        doc.setTextColor(...META_TEXT);
+        doc.text(timeStr, textX, blockY + blockH - 1.2);
+
+        doc.setTextColor(...BODY_TEXT);
       });
     });
 
     // ── Legend ────────────────────────────────────────────────────────────────
-    const ly  = ph - 8;
+    const ly  = ph - 6;
     let   lx  = marginL;
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(6);

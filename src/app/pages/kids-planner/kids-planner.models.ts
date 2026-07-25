@@ -37,4 +37,4 @@ export const CATEGORY_META: Record<TaskCategory, { label: string; emoji: string;
   other:    { label: 'Other',     emoji: '⭐', color: '#DDA0DD' },
 };
 
-export const DAYS: DayOfWeek[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+export const DAYS: DayOfWeek[] = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
