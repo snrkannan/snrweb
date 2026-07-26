@@ -70,7 +70,6 @@
             <button class="kp-seg-btn" [class.active]="pdfBasis==='daily'"    (click)="pdfBasis='daily'">Daily</button>
             <button class="kp-seg-btn" [class.active]="pdfBasis==='weekly'"   (click)="pdfBasis='weekly'">Weekly</button>
             <button class="kp-seg-btn" [class.active]="pdfBasis==='monthly'"  (click)="pdfBasis='monthly'">Monthly</button>
-            <button class="kp-seg-btn" [class.active]="pdfBasis==='grid'"     (click)="pdfBasis='grid'">📊 Grid</button>
             <button class="kp-seg-btn" [class.active]="pdfBasis==='template'" (click)="pdfBasis='template'">📋 Template</button>
           </div>
         </div>
@@ -97,7 +96,7 @@
         <button class="kp-btn kp-btn-ghost" (click)="showPdfPanel = false">Cancel</button>
         <button class="kp-btn kp-btn-primary" (click)="generatePdf()"
           [disabled]="pdfBasis !== 'template' && !tasks.length">
-          ⬇️ {{ pdfBasis === 'template' ? 'Download Template' : pdfBasis === 'grid' ? 'Download Grid' : 'Download PDF' }}
+          ⬇️ {{ pdfBasis === 'template' ? 'Download Template' : 'Download PDF' }}
         </button>
       </div>
     </div>

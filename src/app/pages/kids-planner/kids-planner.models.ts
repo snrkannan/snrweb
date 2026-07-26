@@ -1,6 +1,6 @@
 export type DayOfWeek = 'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat' | 'Sun';
 export type TaskCategory = 'school' | 'homework' | 'sport' | 'hobby' | 'chore' | 'meal' | 'sleep' | 'free' | 'other';
-export type PdfBasis = 'daily' | 'weekly' | 'monthly' | 'template' | 'grid';
+export type PdfBasis = 'daily' | 'weekly' | 'monthly' | 'template';
 
 export interface KidsTask {
   id: string;
