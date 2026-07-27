@@ -67,14 +67,14 @@
         <div class="kp-field">
           <label class="kp-label">Schedule Basis</label>
           <div class="kp-seg">
-            <button class="kp-seg-btn" [class.active]="pdfBasis==='daily'"    (click)="pdfBasis='daily'">Daily</button>
-            <button class="kp-seg-btn" [class.active]="pdfBasis==='weekly'"   (click)="pdfBasis='weekly'">Weekly</button>
-            <button class="kp-seg-btn" [class.active]="pdfBasis==='monthly'"  (click)="pdfBasis='monthly'">Monthly</button>
-            <button class="kp-seg-btn" [class.active]="pdfBasis==='template'" (click)="pdfBasis='template'">📋 Template</button>
+            <button class="kp-seg-btn" [class.active]="pdfBasis==='daily'" (click)="pdfBasis='daily'">Daily</button>
+            <button class="kp-seg-btn" [class.active]="pdfBasis==='weekly'" (click)="pdfBasis='weekly'">Weekly</button>
+            <button class="kp-seg-btn" [class.active]="pdfBasis==='monthly'"
+              (click)="pdfBasis='monthly'">Monthly</button>
+            <button class="kp-seg-btn" [class.active]="pdfBasis==='template'" (click)="pdfBasis='template'">📋
+              Template</button>
           </div>
         </div>
-
-
         <!-- Month/Year (only for monthly) -->
         <ng-container *ngIf="pdfBasis === 'monthly'">
           <div class="kp-field">
@@ -104,10 +104,7 @@
 
   <!-- ════════════════════════════════════════ DAY FILTER ═════════════════ -->
   <div class="kp-filter-bar">
-    <button
-      *ngFor="let d of ALL_DAYS"
-      class="kp-filter-btn"
-      [class.active]="filteredDay === d"
+    <button *ngFor="let d of ALL_DAYS" class="kp-filter-btn" [class.active]="filteredDay === d"
       (click)="filteredDay = d">
       {{ d }}
     </button>
@@ -136,9 +133,7 @@
 
         <!-- One cell per day (X-axis) -->
         <div class="kp-tt-cell" *ngFor="let day of DAYS">
-          <div
-            class="kp-tt-task"
-            *ngFor="let task of getTasksForSlot(day, hour); trackBy: trackById"
+          <div class="kp-tt-task" *ngFor="let task of getTasksForSlot(day, hour); trackBy: trackById"
             [style.--accent]="task.color"
             [title]="task.title + ' · ' + formatTime(task.startTime) + ' – ' + formatTime(task.endTime)">
             <div class="kp-tt-task-top">
@@ -172,26 +167,24 @@
         <h2>{{ filteredDay }}'s Schedule</h2>
         <span class="kp-badge">{{ filteredTasks.length }} tasks</span>
       </div>
-        <div class="kp-task-row"
-           *ngFor="let task of filteredTasks; trackBy: trackById"
-           [style.--accent]="task.color">
-          <div class="kp-row-stripe"></div>
-          <div class="kp-row-emoji">{{ task.emoji }}</div>
-          <div class="kp-row-body">
-            <div class="kp-row-title">{{ task.title }}</div>
-            <div class="kp-row-meta">
-              🕐 {{ formatTime(task.startTime) }} – {{ formatTime(task.endTime) }}
-              <span class="kp-chip" [style.background]="task.color">{{ getCategoryMeta(task.category).label }}</span>
-              <span *ngIf="task.childName" class="kp-chip child">👧 {{ task.childName }}</span>
-            </div>
-            <div class="kp-row-desc" *ngIf="task.description">{{ task.description }}</div>
+      <div class="kp-task-row" *ngFor="let task of filteredTasks; trackBy: trackById" [style.--accent]="task.color">
+        <div class="kp-row-stripe"></div>
+        <div class="kp-row-emoji">{{ task.emoji }}</div>
+        <div class="kp-row-body">
+          <div class="kp-row-title">{{ task.title }}</div>
+          <div class="kp-row-meta">
+            🕐 {{ formatTime(task.startTime) }} – {{ formatTime(task.endTime) }}
+            <span class="kp-chip" [style.background]="task.color">{{ getCategoryMeta(task.category).label }}</span>
+            <span *ngIf="task.childName" class="kp-chip child">👧 {{ task.childName }}</span>
           </div>
-          <div class="kp-row-priority">{{ getPriorityIcon(task.priority) }}</div>
-          <div class="kp-row-btns">
-            <button class="kp-action-btn kp-action-edit" (click)="openEditForm(task)">✏️ Edit</button>
-            <button class="kp-action-btn kp-action-delete" (click)="deleteTask(task.id)">🗑️ Delete</button>
-          </div>
+          <div class="kp-row-desc" *ngIf="task.description">{{ task.description }}</div>
         </div>
+        <div class="kp-row-priority">{{ getPriorityIcon(task.priority) }}</div>
+        <div class="kp-row-btns">
+          <button class="kp-action-btn kp-action-edit" (click)="openEditForm(task)">✏️ Edit</button>
+          <button class="kp-action-btn kp-action-delete" (click)="deleteTask(task.id)">🗑️ Delete</button>
+        </div>
+      </div>
       <div class="kp-empty-state" *ngIf="!filteredTasks.length">
         <div class="kp-empty-icon">🌟</div>
         <p>No tasks for {{ filteredDay }}. Enjoy the free time!</p>
@@ -234,12 +227,8 @@
       <div class="kp-field">
         <label class="kp-label">Category *</label>
         <div class="kp-cat-grid">
-          <button
-            *ngFor="let cat of CATEGORIES"
-            class="kp-cat-btn"
-            [class.selected]="form.category === cat.key"
-            [style.--cat-color]="cat.color"
-            (click)="selectCategory(cat.key)">
+          <button *ngFor="let cat of CATEGORIES" class="kp-cat-btn" [class.selected]="form.category === cat.key"
+            [style.--cat-color]="cat.color" (click)="selectCategory(cat.key)">
             <span class="kp-cat-emoji">{{ cat.emoji }}</span>
             <span class="kp-cat-label">{{ cat.label }}</span>
           </button>
@@ -251,20 +240,13 @@
         <label class="kp-label">Days *</label>
         <div class="kp-day-grid">
           <!-- Select All toggle -->
-          <button
-            class="kp-day-btn kp-day-btn-all"
-            [class.selected-all]="areAllDaysSelected()"
-            (click)="toggleAllDays()"
-            type="button">
+          <button class="kp-day-btn kp-day-btn-all" [class.selected-all]="areAllDaysSelected()"
+            (click)="toggleAllDays()" type="button">
             {{ areAllDaysSelected() ? '✓ All' : 'All' }}
           </button>
           <!-- Individual day buttons -->
-          <button
-            *ngFor="let day of DAYS"
-            class="kp-day-btn"
-            [class.selected]="isDaySelected(day)"
-            (click)="toggleDay(day)"
-            type="button">
+          <button *ngFor="let day of DAYS" class="kp-day-btn" [class.selected]="isDaySelected(day)"
+            (click)="toggleDay(day)" type="button">
             {{ day }}
           </button>
         </div>
@@ -294,9 +276,7 @@
 
     <div class="kp-modal-footer">
       <button class="kp-btn kp-btn-ghost" (click)="closeForm()">Cancel</button>
-      <button class="kp-btn kp-btn-primary"
-        (click)="saveTask()"
-        [disabled]="!form.title?.trim() || !form.days?.length">
+      <button class="kp-btn kp-btn-primary" (click)="saveTask()" [disabled]="!form.title?.trim() || !form.days?.length">
         {{ editingTask ? '💾 Save Changes' : '➕ Add Task' }}
       </button>
     </div>
