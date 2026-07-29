@@ -53,6 +53,7 @@ export class FamilyTreeComponent implements OnInit, OnDestroy {
 
   // view mode
   viewMode: 'canvas' | 'list' = 'canvas';
+  treeLanguage: 'en' | 'ta' = 'en';
   cardStyle: 'compact' | 'standard' | 'detailed' | 'photo' = 'standard';
 
   // list view sort
@@ -579,6 +580,10 @@ export class FamilyTreeComponent implements OnInit, OnDestroy {
     };
     this.editConnectForm = { toId: '', type: 'child' };
     this.showForm = true;
+
+    if (!this.form.nameTamil && this.form.name) {
+      this.autoTranslateNameToTamil();
+    }
   }
 
   editConnectForm = { toId: '', type: 'child' as RelationshipType };
@@ -872,9 +877,57 @@ export class FamilyTreeComponent implements OnInit, OnDestroy {
     this.showLayoutPanel = false;
   }
 
+  async autoTranslateNameToTamil() {
+    const name = this.form.name;
+    if (!name) return;
+    try {
+      const url = `https://inputtools.google.com/request?text=${encodeURIComponent(name)}&itc=ta-t-i0-und&num=1`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data && data[0] === 'SUCCESS' && data[1]) {
+        const words = data[1].map((item: any) => item[1]?.[0] || item[0]);
+        this.form.nameTamil = words.join(' ');
+        this.cdr.markForCheck();
+      }
+    } catch (err) {
+      console.error('Transliteration failed:', err);
+    }
+  }
+
+  async setTreeLanguage(lang: 'en' | 'ta') {
+    this.treeLanguage = lang;
+    if (lang === 'ta') {
+      const membersToTranslate = this.tree.members.filter(m => !m.nameTamil && m.name);
+      for (const m of membersToTranslate) {
+        await this.transliterateMemberName(m);
+      }
+    }
+  }
+
+  async transliterateMemberName(m: FamilyMember) {
+    try {
+      const url = `https://inputtools.google.com/request?text=${encodeURIComponent(m.name)}&itc=ta-t-i0-und&num=1`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data && data[0] === 'SUCCESS' && data[1]) {
+        const words = data[1].map((item: any) => item[1]?.[0] || item[0]);
+        const nameTamil = words.join(' ');
+        this.svc.updateMember(m.id, { nameTamil }, true);
+      }
+    } catch (err) {
+      console.error(`Transliteration failed for ${m.name}:`, err);
+    }
+  }
+
+  onFormNameChange() {
+    if (!this.form.nameTamil && this.form.name) {
+      this.autoTranslateNameToTamil();
+    }
+  }
+
   private emptyForm(): any {
     return {
-      name: '', age: null, dob: null, gender: 'male', photo: null, notes: '',
+      name: '', nameTamil: '', age: null, dob: null, gender: 'male', photo: null, notes: '',
       generation: 0, customFields: [], relationshipType: 'child', relatedMemberId: '',
       spouseId: null, parentIds: [], childIds: [], siblingIds: [],
       groupId: this.tree.activeGroupId,

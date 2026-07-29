@@ -336,7 +336,8 @@ export class FamilyTreeService implements OnDestroy {
       generation: data.generation ?? 0,
       spouseId: null, parentIds: [], childIds: [], siblingIds: [],
       x: foundRelated ? parentX + 220 : 150,
-      y: foundRelated ? parentY + 150 : 150
+      y: foundRelated ? parentY + 150 : 150,
+      nameTamil: data.nameTamil || ''
     };
     this.tree.members.push(m);
     this.applyRelationships(m, data);

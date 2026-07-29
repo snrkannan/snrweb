@@ -204,9 +204,9 @@
   &:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.14); }
 
   &.ft-card-selected { border-color: var(--snr-primary); box-shadow: 0 0 0 3px rgba(var(--snr-primary-rgb),0.25); }
-  &.ft-card-male    { border: 1px solid #1d4ed8; }   // strong blue
-  &.ft-card-female  { border: 1px solid #db2777; }   // strong pink
-  &.ft-card-other   { border: 1px solid #7c3aed; }   // strong purple
+  &.ft-card-male    { border: 1px solid #1d4ed8; background: #eff6ff; }   // strong blue border, light blue bg
+  &.ft-card-female  { border: 1px solid #db2777; background: #fdf2f8; }   // strong pink border, light pink bg
+  &.ft-card-other   { border: 1px solid #7c3aed; background: #faf5ff; }   // strong purple border, light purple bg
 }
 
 // ── Horizontal card layout ────────────────────────────────────────────────────
@@ -228,18 +228,17 @@
 .ft-card-body { flex: 1; min-width: 0; }
 .ft-card-name { font-size: 13px; font-weight: 700; color: #1e293b; line-height: 1.2; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ft-card-meta { display: flex; align-items: center; gap: 4px; font-size: 10px; color: #64748b; flex-wrap: wrap; }
-.ft-gender-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
 .ft-spouse { font-size: 10px; color: #ec4899; display: flex; align-items: center; gap: 2px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 // ── Actions bar — always visible ─────────────────────────────────────────────
 .ft-card-actions {
   display: flex; justify-content: center; gap: 4px;
   padding: 5px 6px 6px;
-  border-top: 1px solid #f0f4f8;
-  background: #fafbfc; border-radius: 0 0 10px 10px;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  background: rgba(0, 0, 0, 0.02); border-radius: 0 0 10px 10px;
 }
 .ft-action-btn {
-  background: #f1f5f9; border: none; border-radius: 6px; cursor: pointer;
+  background: rgba(0, 0, 0, 0.04); border: none; border-radius: 6px; cursor: pointer;
   width: 26px; height: 26px; display: flex; align-items: center; justify-content: center;
   mat-icon { font-size: 13px; width: 13px; height: 13px; color: #64748b; }
   &:hover { background: var(--snr-primary-light); mat-icon { color: var(--snr-primary); } }

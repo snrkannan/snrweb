@@ -26,6 +26,7 @@ export interface FamilyMember {
   siblingIds: string[];
   x: number;
   y: number;
+  nameTamil?: string;
 }
 
 export interface FamilyLink {
