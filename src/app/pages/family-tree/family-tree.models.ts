@@ -47,6 +47,7 @@ export interface FamilyTree {
   members: FamilyMember[];
   links: FamilyLink[];
   activeGroupId: string;
+  layoutMode?: 'auto' | 'custom';
 }
 
 export interface PdfOptions {

@@ -528,7 +528,13 @@ export class FamilyTreeComponent implements OnInit, OnDestroy {
     if (m) { m.x = e.clientX - this.dragging.ox; m.y = e.clientY - this.dragging.oy; }
   }
 
-  onDragEnd() { if (this.dragging) { this.svc.resolveOverlapsAndSave(); this.dragging = null; } }
+  onDragEnd() {
+    if (this.dragging) {
+      this.tree.layoutMode = 'custom';
+      this.svc.resolveOverlapsAndSave();
+      this.dragging = null;
+    }
+  }
 
   onWheel(e: WheelEvent) {
     e.preventDefault();
@@ -571,7 +577,39 @@ export class FamilyTreeComponent implements OnInit, OnDestroy {
       relatedMemberId: '',
       genMode: hasParents ? 'auto' : 'manual'
     };
+    this.editConnectForm = { toId: '', type: 'child' };
     this.showForm = true;
+  }
+
+  editConnectForm = { toId: '', type: 'child' as RelationshipType };
+
+  get availableMembersForEditConnect(): FamilyMember[] {
+    if (!this.editingMember) return [];
+    const connectedIds = new Set<string>([
+      this.editingMember.id,
+      this.editingMember.spouseId || '',
+      ...(this.editingMember.parentIds ?? []),
+      ...(this.editingMember.childIds ?? []),
+      ...(this.editingMember.siblingIds ?? [])
+    ]);
+    return this.tree.members.filter(m => !connectedIds.has(m.id));
+  }
+
+  connectExistingInEdit() {
+    if (!this.editingMember || !this.editConnectForm.toId) return;
+    this.svc.connectMembers(this.editingMember.id, this.editConnectForm.toId, this.editConnectForm.type, undefined, true);
+    
+    const updated = this.getMember(this.editingMember.id);
+    if (updated) {
+      this.editingMember = updated;
+      this.form = {
+        ...updated,
+        relationshipType: 'child',
+        relatedMemberId: '',
+        genMode: (updated.parentIds && updated.parentIds.length > 0) ? 'auto' : 'manual'
+      };
+    }
+    this.editConnectForm.toId = '';
   }
 
   saveForm() {
@@ -637,6 +675,64 @@ export class FamilyTreeComponent implements OnInit, OnDestroy {
     this.selectedPathKey = null;
     this.highlightedMemberIds = new Set();
   }
+
+  get selectedLinkFrom(): FamilyMember | undefined {
+    if (!this.selectedPathKey) return undefined;
+    const path = this.svgPaths.find(p => p.pathKey === this.selectedPathKey);
+    return path ? this.getMember(path.fromId) : undefined;
+  }
+
+  get selectedLinkTo(): FamilyMember | undefined {
+    if (!this.selectedPathKey) return undefined;
+    const path = this.svgPaths.find(p => p.pathKey === this.selectedPathKey);
+    return path ? this.getMember(path.toId) : undefined;
+  }
+
+  get selectedLinkPos(): { x: number; y: number } {
+    if (!this.selectedPathKey) return { x: 0, y: 0 };
+    const path = this.svgPaths.find(p => p.pathKey === this.selectedPathKey);
+    if (!path) return { x: 0, y: 0 };
+    const from = this.getMember(path.fromId);
+    const to = this.getMember(path.toId);
+    if (!from || !to) return { x: 0, y: 0 };
+    const CW = 200, CH = 120;
+    return {
+      x: (from.x + to.x) / 2 + CW / 2,
+      y: (from.y + to.y) / 2 + CH / 2
+    };
+  }
+
+  disconnectRelation(id1: string, id2: string) {
+    const m1 = this.getMember(id1);
+    const m2 = this.getMember(id2);
+    if (!m1 || !m2) return;
+    if (confirm(`Are you sure you want to sever the connection between ${m1.name} and ${m2.name}?`)) {
+      this.svc.disconnectRelation(id1, id2);
+      this.clearLinkSelection();
+      if (this.editingMember && (this.editingMember.id === id1 || this.editingMember.id === id2)) {
+        const updated = this.getMember(this.editingMember.id);
+        if (updated) {
+          this.editingMember = updated;
+          this.form = {
+            ...updated,
+            relationshipType: 'child',
+            relatedMemberId: '',
+            genMode: (updated.parentIds && updated.parentIds.length > 0) ? 'auto' : 'manual'
+          };
+        }
+      }
+    }
+  }
+
+  disconnectSelectedLink(event: MouseEvent) {
+    event.stopPropagation();
+    const from = this.selectedLinkFrom;
+    const to = this.selectedLinkTo;
+    if (from && to) {
+      this.disconnectRelation(from.id, to.id);
+    }
+  }
+
 
   toggleMultiSelectMode() {
     this.multiSelectMode = !this.multiSelectMode;

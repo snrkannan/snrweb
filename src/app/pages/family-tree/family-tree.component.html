@@ -199,6 +199,26 @@
         </ng-container>
       </ng-container>
 
+      <!-- Floating Relation Disconnect Confirmation Card -->
+      <div *ngIf="selectedPathKey && selectedLinkFrom && selectedLinkTo"
+           class="ft-link-disconnect-card"
+           [style.left.px]="selectedLinkPos.x - 120"
+           [style.top.px]="selectedLinkPos.y - 60"
+           (click)="$event.stopPropagation()">
+        <div class="ft-ldc-body">
+          <div class="ft-ldc-title">Disconnect Relation</div>
+          <p>Sever connection between <strong>{{ selectedLinkFrom.name }}</strong> and <strong>{{ selectedLinkTo.name }}</strong>?</p>
+        </div>
+        <div class="ft-ldc-actions">
+          <button class="btn-danger-sm" (click)="disconnectSelectedLink($event)">
+            <mat-icon>link_off</mat-icon> Disconnect
+          </button>
+          <button class="btn-outline-sm" (click)="clearLinkSelection()">
+            Cancel
+          </button>
+        </div>
+      </div>
+
       <!-- Member cards -->
       <div *ngFor="let m of tree.members"
            class="ft-card"
@@ -748,6 +768,102 @@
             <input class="ft-input" [(ngModel)]="cf.key"   placeholder="Field name">
             <input class="ft-input" [(ngModel)]="cf.value" placeholder="Value">
             <button class="ft-rm-cf" (click)="removeCustomField(i)"><mat-icon>remove_circle_outline</mat-icon></button>
+          </div>
+        </div>
+
+        <!-- Connections (Edit mode only) -->
+        <div class="ft-connections-section" *ngIf="editingMember">
+          <div class="ft-section-label">Current Connections</div>
+
+          <!-- Connect Existing Member Form -->
+          <div class="ft-edit-connect-form" *ngIf="availableMembersForEditConnect.length">
+            <div class="ft-ecf-title">Connect Existing Member</div>
+            <div class="ft-ecf-row">
+              <select class="ft-input ft-input-sm" [(ngModel)]="editConnectForm.type" style="flex: 1;">
+                <option value="spouse">Spouse</option>
+                <option value="child">Child</option>
+                <option value="father">Father</option>
+                <option value="mother">Mother</option>
+                <option value="brother">Brother</option>
+                <option value="sister">Sister</option>
+              </select>
+              <select class="ft-input ft-input-sm" [(ngModel)]="editConnectForm.toId" style="flex: 2;">
+                <option value="">— Select Member —</option>
+                <option *ngFor="let m of availableMembersForEditConnect" [value]="m.id">
+                  {{ m.name }} ({{ getGroup(m.groupId)?.name }})
+                </option>
+              </select>
+              <button class="btn-primary btn-sm" [disabled]="!editConnectForm.toId" (click)="connectExistingInEdit()" style="padding: 6px 12px; height: 36px; display: flex; align-items: center; gap: 4px;">
+                <mat-icon style="font-size:16px;width:16px;height:16px;">link</mat-icon> Connect
+              </button>
+            </div>
+          </div>
+
+          <div class="ft-conn-list">
+            <!-- Spouse -->
+            <div class="ft-conn-item" *ngIf="editingMember.spouseId && getMember(editingMember.spouseId)">
+              <div class="ft-conn-info">
+                <mat-icon class="icon-spouse">favorite</mat-icon>
+                <span class="ft-conn-type">Spouse:</span>
+                <span class="ft-conn-name">{{ getMember(editingMember.spouseId)?.name }}</span>
+              </div>
+              <button class="btn-disconnect" (click)="disconnectRelation(editingMember.id, editingMember.spouseId)" title="Sever connection">
+                <mat-icon>link_off</mat-icon> Disconnect
+              </button>
+            </div>
+
+            <!-- Parents -->
+            <ng-container *ngIf="editingMember.parentIds?.length">
+              <div class="ft-conn-item" *ngFor="let pid of editingMember.parentIds">
+                <ng-container *ngIf="getMember(pid)">
+                  <div class="ft-conn-info">
+                    <mat-icon class="icon-parent">person</mat-icon>
+                    <span class="ft-conn-type">Parent:</span>
+                    <span class="ft-conn-name">{{ getMember(pid)?.name }}</span>
+                  </div>
+                  <button class="btn-disconnect" (click)="disconnectRelation(editingMember.id, pid)" title="Sever connection">
+                    <mat-icon>link_off</mat-icon> Disconnect
+                  </button>
+                </ng-container>
+              </div>
+            </ng-container>
+
+            <!-- Children -->
+            <ng-container *ngIf="editingMember.childIds?.length">
+              <div class="ft-conn-item" *ngFor="let cid of editingMember.childIds">
+                <ng-container *ngIf="getMember(cid)">
+                  <div class="ft-conn-info">
+                    <mat-icon class="icon-child">child_care</mat-icon>
+                    <span class="ft-conn-type">Child:</span>
+                    <span class="ft-conn-name">{{ getMember(cid)?.name }}</span>
+                  </div>
+                  <button class="btn-disconnect" (click)="disconnectRelation(editingMember.id, cid)" title="Sever connection">
+                    <mat-icon>link_off</mat-icon> Disconnect
+                  </button>
+                </ng-container>
+              </div>
+            </ng-container>
+
+            <!-- Siblings -->
+            <ng-container *ngIf="editingMember.siblingIds?.length">
+              <div class="ft-conn-item" *ngFor="let sid of editingMember.siblingIds">
+                <ng-container *ngIf="getMember(sid)">
+                  <div class="ft-conn-info">
+                    <mat-icon class="icon-sibling">people</mat-icon>
+                    <span class="ft-conn-type">Sibling:</span>
+                    <span class="ft-conn-name">{{ getMember(sid)?.name }}</span>
+                  </div>
+                  <button class="btn-disconnect" (click)="disconnectRelation(editingMember.id, sid)" title="Sever connection">
+                    <mat-icon>link_off</mat-icon> Disconnect
+                  </button>
+                </ng-container>
+              </div>
+            </ng-container>
+
+            <!-- No connections placeholder -->
+            <div class="ft-conn-empty" *ngIf="!editingMember.spouseId && !editingMember.parentIds?.length && !editingMember.childIds?.length && !editingMember.siblingIds?.length">
+              No active relationships connected to this member.
+            </div>
           </div>
         </div>
 

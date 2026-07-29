@@ -309,7 +309,20 @@ export class FamilyTreeService implements OnDestroy {
 
   // ── CRUD ───────────────────────────────────────────────────────────────────
 
-  addMember(data: Partial<FamilyMember>): FamilyMember {
+  addMember(data: Partial<FamilyMember> & { relatedMemberId?: string }): FamilyMember {
+    let parentX = 0, parentY = 0;
+    let foundRelated = false;
+
+    const relatedId = data.relatedMemberId || data.spouseId || (data.parentIds && data.parentIds[0]) || (data.childIds && data.childIds[0]);
+    if (relatedId) {
+      const rel = this.getMember(relatedId);
+      if (rel) {
+        parentX = rel.x;
+        parentY = rel.y;
+        foundRelated = true;
+      }
+    }
+
     const m: FamilyMember = {
       id: this.uid(),
       groupId: data.groupId || this.tree.activeGroupId,
@@ -322,7 +335,8 @@ export class FamilyTreeService implements OnDestroy {
       customFields: data.customFields || [],
       generation: data.generation ?? 0,
       spouseId: null, parentIds: [], childIds: [], siblingIds: [],
-      x: 0, y: 0
+      x: foundRelated ? parentX + 220 : 150,
+      y: foundRelated ? parentY + 150 : 150
     };
     this.tree.members.push(m);
     this.applyRelationships(m, data);
@@ -441,6 +455,32 @@ export class FamilyTreeService implements OnDestroy {
     this.resolveOverlaps();
     this.save();
   }
+
+  disconnectRelation(id1: string, id2: string) {
+    const m1 = this.getMember(id1);
+    const m2 = this.getMember(id2);
+    if (!m1 || !m2) return;
+
+    // 1. Spouse
+    if (m1.spouseId === id2) m1.spouseId = null;
+    if (m2.spouseId === id1) m2.spouseId = null;
+
+    // 2. Parent-Child
+    m1.parentIds = (m1.parentIds ?? []).filter(id => id !== id2);
+    m1.childIds = (m1.childIds ?? []).filter(id => id !== id2);
+    m2.parentIds = (m2.parentIds ?? []).filter(id => id !== id1);
+    m2.childIds = (m2.childIds ?? []).filter(id => id !== id1);
+
+    // 3. Sibling
+    m1.siblingIds = (m1.siblingIds ?? []).filter(id => id !== id2);
+    m2.siblingIds = (m2.siblingIds ?? []).filter(id => id !== id1);
+
+    this.buildLinks();
+    this.layoutAll();
+    this.resolveOverlaps();
+    this.save();
+  }
+
 
 
   // Recalculates generation for every member that has parents, bottom-up BFS
@@ -662,6 +702,8 @@ export class FamilyTreeService implements OnDestroy {
     };
     const s = spacingMap[opts.spacing];
 
+    this.tree.layoutMode = 'auto'; // Reset to auto-layout so layout logic runs
+
     let offset = 0;
     for (const group of this.tree.groups) {
       const members = this.getMembersInGroup(group.id);
@@ -672,8 +714,12 @@ export class FamilyTreeService implements OnDestroy {
     this.save();
   }
 
-  layoutAll() {
+  layoutAll(force = false) {
     if (!this.tree.members.length) return;
+    if (this.tree.layoutMode === 'custom' && !force) {
+      this.resolveOverlaps();
+      return;
+    }
 
     let xOffset = 0;
     for (const group of this.tree.groups) {
