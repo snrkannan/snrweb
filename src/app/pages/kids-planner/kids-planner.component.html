@@ -235,10 +235,33 @@
         </div>
       </div>
 
+      <!-- Weekly Once Toggle -->
+      <div class="kp-form-row" style="margin-bottom: 12px; align-items: center;">
+        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none;">
+          <input type="checkbox" [(ngModel)]="form.isWeeklyOnce" (change)="onStartDateChange()" style="width: 16px; height: 16px; cursor: pointer;" />
+          <span style="font-weight: 600; font-size: 13px; color: #4A5568;">Occurs weekly once</span>
+        </label>
+      </div>
+
+      <!-- Start Date & End Date (visible if Weekly Once is enabled) -->
+      <div class="kp-form-row" *ngIf="form.isWeeklyOnce" style="margin-bottom: 12px; gap: 12px;">
+        <div class="kp-field flex-1">
+          <label class="kp-label">Start Date *</label>
+          <input class="kp-input" type="date" [(ngModel)]="form.startDate" (change)="onStartDateChange()" />
+        </div>
+        <div class="kp-field flex-1">
+          <label class="kp-label">End Date *</label>
+          <input class="kp-input" type="date" [(ngModel)]="form.endDate" />
+        </div>
+      </div>
+
       <!-- Days picker -->
       <div class="kp-field">
         <label class="kp-label">Days *</label>
-        <div class="kp-day-grid">
+        <div *ngIf="form.isWeeklyOnce" style="font-size: 13px; font-weight: 500; color: #718096; padding: 6px 0;">
+          Calculated Day: <span class="kp-chip" style="background: #e2e8f0; color: #4a5568; font-weight: 600; font-size: 11px;">{{ form.days?.[0] || 'Select Start Date' }}</span>
+        </div>
+        <div class="kp-day-grid" *ngIf="!form.isWeeklyOnce">
           <!-- Select All toggle -->
           <button class="kp-day-btn kp-day-btn-all" [class.selected-all]="areAllDaysSelected()"
             (click)="toggleAllDays()" type="button">

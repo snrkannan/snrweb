@@ -539,7 +539,11 @@ export class FamilyTreeComponent implements OnInit, OnDestroy {
 
   onWheel(e: WheelEvent) {
     e.preventDefault();
-    this.zoom = Math.max(0.3, Math.min(2, this.zoom - e.deltaY * 0.001));
+    if (e.shiftKey) {
+      this.canvasOffset.x -= e.deltaY;
+    } else {
+      this.canvasOffset.y -= e.deltaY;
+    }
   }
 
   // ── CRUD ───────────────────────────────────────────────────────────────────

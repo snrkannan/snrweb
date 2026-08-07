@@ -955,6 +955,47 @@
           </select>
         </div>
 
+        <div class="ft-pdf-section">Paper & Page Settings</div>
+        <div class="ft-form-row" style="display: flex; gap: 10px; margin-bottom: 10px;">
+          <div style="flex: 1;">
+            <label style="font-size: 0.8rem; color: #666; display: block; margin-bottom: 4px;">Paper Size</label>
+            <select class="ft-input" [(ngModel)]="pdfOpts.paperSize">
+              <option value="a4">A4</option>
+              <option value="a3">A3</option>
+              <option value="letter">Letter</option>
+              <option value="legal">Legal</option>
+            </select>
+          </div>
+          <div style="flex: 1;">
+            <label style="font-size: 0.8rem; color: #666; display: block; margin-bottom: 4px;">Orientation</label>
+            <select class="ft-input" [(ngModel)]="pdfOpts.orientation">
+              <option value="landscape">Landscape</option>
+              <option value="portrait">Portrait</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="ft-pdf-section">Tiling (Split across sheets)</div>
+        <div style="margin-bottom: 12px;">
+          <label class="ft-check">
+            <input type="checkbox" [(ngModel)]="pdfOpts.enableTiling"> 
+            Enable tiling (Poster layout for large trees)
+          </label>
+        </div>
+        <div class="ft-form-row" style="display: flex; gap: 10px; margin-bottom: 10px;" *ngIf="pdfOpts.enableTiling">
+          <div style="flex: 1;">
+            <label style="font-size: 0.8rem; color: #666; display: block; margin-bottom: 4px;">Columns (Horizontal Sheets)</label>
+            <input type="number" class="ft-input" [(ngModel)]="pdfOpts.tileCols" min="1" max="10">
+          </div>
+          <div style="flex: 1;">
+            <label style="font-size: 0.8rem; color: #666; display: block; margin-bottom: 4px;">Rows (Vertical Sheets)</label>
+            <input type="number" class="ft-input" [(ngModel)]="pdfOpts.tileRows" min="1" max="10">
+          </div>
+        </div>
+        <div *ngIf="pdfOpts.enableTiling" style="font-size: 0.8rem; color: #10b981; margin-bottom: 10px; font-weight: 500;">
+          💡 This will generate the visual tree across {{ pdfOpts.tileCols * pdfOpts.tileRows }} sheets. Each sheet contains alignment coordinates and instructions to paste them together in order.
+        </div>
+
         <div class="ft-pdf-section">Include in report</div>
         <div class="ft-check-grid">
           <label class="ft-check"><input type="checkbox" [(ngModel)]="pdfOpts.includePhoto"> Photo</label>

@@ -44,7 +44,8 @@ export class KidsPlannerPdfService {
     DAYS.forEach((day, idx) => {
       if (idx > 0) doc.addPage();
       this.fillPageBg(doc, pw, ph);
-      const dayTasks = tasks.filter(t => t.days.includes(day));
+      const targetDate = this.getDayDate(opts.weekStartDate || new Date().toISOString().slice(0, 10), day);
+      const dayTasks = tasks.filter(t => this.isTaskActiveOnDate(t, targetDate));
       this.drawPageHeader(doc, pw, `${day} - Daily Planner`, opts.childName);
       this.drawTaskList(doc, pw, ph, dayTasks, 40);
       this.drawFooter(doc, pw, ph, `${opts.childName}'s Daily Schedule  ·  ${day}`);
@@ -83,8 +84,9 @@ export class KidsPlannerPdfService {
     // Task rows per column
     DAYS.forEach((day, i) => {
       const x        = 14 + i * colW;
+      const targetDate = this.getDayDate(opts.weekStartDate || new Date().toISOString().slice(0, 10), day);
       const dayTasks = tasks
-        .filter(t => t.days.includes(day))
+        .filter(t => this.isTaskActiveOnDate(t, targetDate))
         .sort((a, b) => a.startTime.localeCompare(b.startTime));
       let y          = startY + 12;
 
@@ -140,100 +142,160 @@ export class KidsPlannerPdfService {
                         'July','August','September','October','November','December'];
     const monthName  = monthNames[opts.selectedMonth];
 
-    this.fillPageBg(doc, pw, ph);
-    this.drawPageHeader(doc, pw, `${monthName} ${opts.selectedYear} - Monthly Planner`, opts.childName, true);
-
-    const firstDay    = new Date(opts.selectedYear, opts.selectedMonth, 1);
     const daysInMonth = new Date(opts.selectedYear, opts.selectedMonth + 1, 0).getDate();
-    const startOffset = (firstDay.getDay() + 6) % 7;   // Mon = 0
 
-    const gridX = 14, gridY = 42;
-    const cellW = (pw - 28) / 7;
-    const cellH = (ph - gridY - 18) / 6;
+    const sortedTasks = [...tasks].sort((a, b) => a.startTime.localeCompare(b.startTime));
 
-    // Day-of-week headers
-    const dayLabels = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-    dayLabels.forEach((dl, i) => {
+    const gridX = 14;
+    const startY = 42;
+    const labelColW = 55;
+    const cellW = (pw - 28 - labelColW) / daysInMonth;
+    const rowH = 10;
+    const headerH = 9;
+
+    let y = startY;
+
+    const drawGridHeader = (currentY: number) => {
+      // Task & Time column header
       doc.setFillColor(...DAY_HDR_BG);
-      doc.roundedRect(gridX + i * cellW, gridY, cellW - 1, 7, 1, 1, 'F');
+      doc.setDrawColor(100, 110, 125);
+      doc.setLineWidth(0.12);
+      doc.rect(gridX, currentY, labelColW, headerH, 'FD');
+      
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(8);
+      doc.setFontSize(8.5);
       doc.setTextColor(...DAY_HDR_TEXT);
-      doc.text(dl, gridX + i * cellW + cellW / 2, gridY + 5, { align: 'center' });
-    });
-    doc.setTextColor(...BODY_TEXT);
+      doc.text('Task & Time', gridX + 4, currentY + 5.5);
 
-    // Calendar cells
-    let cellDay = 1;
-    for (let week = 0; week < 6; week++) {
-      for (let dow = 0; dow < 7; dow++) {
-        const cellNum = week * 7 + dow;
-        if (cellNum < startOffset || cellDay > daysInMonth) continue;
+      // Day columns headers
+      for (let d = 1; d <= daysInMonth; d++) {
+        const cx = gridX + labelColW + (d - 1) * cellW;
+        const date = new Date(opts.selectedYear, opts.selectedMonth, d);
+        const dayName = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][date.getDay()];
+        const isSunday = (date.getDay() === 0);
 
-        const cx = gridX + dow * cellW;
-        const cy = gridY + 7 + week * cellH;
+        if (isSunday) {
+          doc.setFillColor(255, 220, 220); // soft pastel red/pink for Sunday header
+        } else if (d % 2 === 0) {
+          doc.setFillColor(205, 224, 250); // slightly shaded sky blue for even columns
+        } else {
+          doc.setFillColor(...DAY_HDR_BG);  // standard soft sky blue for odd columns
+        }
+        doc.rect(cx, currentY, cellW, headerH, 'FD');
 
-        // Cell bg
-        doc.setDrawColor(210, 220, 235);
-        doc.setFillColor(...CARD_BG);
-        doc.roundedRect(cx, cy, cellW - 1, cellH - 1, 1, 1, 'FD');
-
-        // Date number
+        // Day number
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(7);
-        doc.setTextColor(100, 120, 160);
-        doc.text(String(cellDay), cx + 2.5, cy + 5);
+        doc.setFontSize(7.5);
+        if (isSunday) {
+          doc.setTextColor(180, 80, 80); // dark red text for Sunday
+        } else {
+          doc.setTextColor(...DAY_HDR_TEXT);
+        }
+        doc.text(String(d), cx + cellW / 2, currentY + 4, { align: 'center' });
 
-        // Tasks for this weekday
-        const weekdayKey = dayLabels[dow] as DayOfWeek;
-        const dayTasks   = tasks.filter(t => t.days.includes(weekdayKey));
-        let ty = cy + 8;
-
-        dayTasks.slice(0, 3).forEach(task => {
-          const meta   = CATEGORY_META[task.category];
-          const pastel = this.pastelOf(meta.color);
-          doc.setFillColor(...pastel);
-          doc.setDrawColor(200, 210, 225);
-          doc.roundedRect(cx + 1, ty, cellW - 6, 4.5, 0.5, 0.5, 'FD');
-
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(4.5);
-          doc.setTextColor(...BODY_TEXT);
-          const lbl = doc.splitTextToSize(this.stripEmoji(task.title), cellW - 10);
-          doc.text(lbl[0], cx + 2.5, ty + 3);
-
-          // Small checkbox circle
-          this.drawCheckCircle(doc, cx + cellW - 5.5, ty + 2.2, 1.6);
-
-          doc.setTextColor(...BODY_TEXT);
-          ty += 5.2;
-        });
-
-        cellDay++;
+        // Day of week letter (3 chars)
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(6);
+        if (isSunday) {
+          doc.setTextColor(180, 80, 80); // dark red text for Sunday
+        } else {
+          doc.setTextColor(100, 120, 160);
+        }
+        doc.text(dayName, cx + cellW / 2, currentY + 7.5, { align: 'center' });
       }
-    }
+    };
 
-    // Legend
-    let lx = 14;
-    const ly = ph - 12;
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(6.5);
-    doc.setTextColor(100, 100, 120);
-    doc.text('Legend:', lx, ly);
-    lx += 14;
+    // Initial page setup
+    this.fillPageBg(doc, pw, ph);
+    this.drawPageHeader(doc, pw, `${monthName} ${opts.selectedYear} - Monthly Tracker`, opts.childName, true);
+    drawGridHeader(y);
+    y += headerH;
 
-    Object.values(CATEGORY_META).forEach(meta => {
-      const pastel = this.pastelOf(meta.color);
-      doc.setFillColor(...pastel);
-      doc.setDrawColor(180, 190, 210);
-      doc.roundedRect(lx, ly - 3.5, 3, 3, 0.4, 0.4, 'FD');
+    sortedTasks.forEach((task) => {
+      // Check for page overflow (leave space for footer)
+      if (y + rowH > ph - 18) {
+        this.drawFooter(doc, pw, ph, `${opts.childName}'s Monthly Schedule  ·  ${monthName} ${opts.selectedYear}`);
+        doc.addPage();
+        this.fillPageBg(doc, pw, ph);
+        this.drawPageHeader(doc, pw, `${monthName} ${opts.selectedYear} - Monthly Tracker`, opts.childName, true);
+        y = startY;
+        drawGridHeader(y);
+        y += headerH;
+      }
+
+      const meta = CATEGORY_META[task.category];
+      const accent = this.accentOf(meta.color);
+
+      // Draw Task column cell
+      doc.setFillColor(...CARD_BG);
+      doc.setDrawColor(100, 110, 125);
+      doc.setLineWidth(0.12);
+      doc.rect(gridX, y, labelColW, rowH, 'FD');
+
+      // Left accent stripe in task cell
+      doc.setFillColor(...accent);
+      doc.rect(gridX, y + 0.5, 2, rowH - 1, 'F');
+
+      // Task Title
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(...BODY_TEXT);
+      const strippedTitle = this.stripEmoji(task.title);
+      const textWidthLimit = labelColW - 6;
+      const titleLines = doc.splitTextToSize(strippedTitle, textWidthLimit);
+      doc.text(titleLines[0], gridX + 4, y + 4.2);
+
+      // Task Time
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(5.5);
-      doc.setTextColor(80, 80, 100);
-      doc.text(meta.label, lx + 4, ly - 0.5);
-      lx += 24;
+      doc.setFontSize(6.5);
+      doc.setTextColor(...META_TEXT);
+      doc.text(`${this.formatTime(task.startTime)}–${this.formatTime(task.endTime)}`, gridX + 4, y + 8);
+
+      // Draw Day columns
+      for (let d = 1; d <= daysInMonth; d++) {
+        const cx = gridX + labelColW + (d - 1) * cellW;
+        const date = new Date(opts.selectedYear, opts.selectedMonth, d);
+        const dayOfWeekName = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][date.getDay()] as DayOfWeek;
+        const isActive = this.isTaskActiveOnDate(task, date);
+        const isEvenCol = (d % 2 === 0);
+        const isSunday = (date.getDay() === 0);
+
+        doc.setDrawColor(100, 110, 125);
+        doc.setLineWidth(0.12);
+
+        if (isActive) {
+          if (isSunday) {
+            doc.setFillColor(255, 245, 245); // light pink tint for active Sunday cell
+          } else if (isEvenCol) {
+            doc.setFillColor(242, 246, 252); // extremely light blue-grey shade for even columns (active)
+          } else {
+            doc.setFillColor(255, 255, 255); // pure white for odd columns (active)
+          }
+          doc.rect(cx, y, cellW, rowH, 'FD');
+
+          // Draw small checkbox square in the center of the active cell
+          const sqSize = 3.2;
+          const sqX = cx + (cellW - sqSize) / 2;
+          const sqY = y + (rowH - sqSize) / 2;
+          doc.setDrawColor(...CHK_STROKE);
+          doc.setLineWidth(0.35);
+          doc.rect(sqX, sqY, sqSize, sqSize, 'S');
+        } else {
+          if (isSunday) {
+            doc.setFillColor(248, 226, 226); // shaded/darker pink for inactive Sunday cell
+          } else if (isEvenCol) {
+            doc.setFillColor(228, 233, 240); // darker shade for even columns (inactive)
+          } else {
+            doc.setFillColor(245, 247, 250); // lighter shade for odd columns (inactive)
+          }
+          doc.rect(cx, y, cellW, rowH, 'FD');
+        }
+      }
+
+      y += rowH;
     });
 
+    // Draw Footer on the final page
     this.drawFooter(doc, pw, ph, `${opts.childName}'s Monthly Schedule  ·  ${monthName} ${opts.selectedYear}`);
     doc.save(`${opts.childName}-${monthName.toLowerCase()}-${opts.selectedYear}-planner.pdf`);
   }
@@ -535,6 +597,32 @@ export class KidsPlannerPdfService {
     const g = parseInt(hex.slice(3, 5), 16);
     const b = parseInt(hex.slice(5, 7), 16);
     return [r, g, b];
+  }
+
+  private getDayDate(weekStartStr: string, day: DayOfWeek): Date {
+    const start = new Date(weekStartStr + 'T00:00:00');
+    const dayOrder: DayOfWeek[] = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const startDayIdx = start.getDay();
+    const targetDayIdx = dayOrder.indexOf(day);
+    let diff = targetDayIdx - startDayIdx;
+    const targetDate = new Date(start);
+    targetDate.setDate(start.getDate() + diff);
+    return targetDate;
+  }
+
+  private isTaskActiveOnDate(task: KidsTask, date: Date): boolean {
+    const dayOfWeekName = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][date.getDay()] as DayOfWeek;
+    if (!task.days.includes(dayOfWeekName)) {
+      return false;
+    }
+    const dateStr = date.toISOString().slice(0, 10);
+    if (task.startDate && dateStr < task.startDate) {
+      return false;
+    }
+    if (task.endDate && dateStr > task.endDate) {
+      return false;
+    }
+    return true;
   }
 
   /**

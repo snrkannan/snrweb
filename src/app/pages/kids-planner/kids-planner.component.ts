@@ -207,6 +207,15 @@ export class KidsPlannerComponent implements OnInit {
     return `${hour}:${m.toString().padStart(2, '0')} ${ampm}`;
   }
 
+  onStartDateChange(): void {
+    if (this.form.isWeeklyOnce && this.form.startDate) {
+      const date = new Date(this.form.startDate + 'T00:00:00');
+      const dayIndex = date.getDay();
+      const day = DAYS[dayIndex];
+      this.form.days = [day];
+    }
+  }
+
   private emptyForm(): Partial<KidsTask> {
     return {
       title: '',
@@ -218,7 +227,10 @@ export class KidsPlannerComponent implements OnInit {
       emoji: CATEGORY_META['school'].emoji,
       color: CATEGORY_META['school'].color,
       childName: this.pdfChildName || '',
-      priority: 'medium'
+      priority: 'medium',
+      isWeeklyOnce: false,
+      startDate: '',
+      endDate: ''
     };
   }
 

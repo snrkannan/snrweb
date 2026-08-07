@@ -15,6 +15,9 @@ export interface KidsTask {
   childName: string;
   priority: 'low' | 'medium' | 'high';
   createdAt: Date;
+  isWeeklyOnce?: boolean;
+  startDate?: string;
+  endDate?: string;
 }
 
 export interface KidsPdfOptions {

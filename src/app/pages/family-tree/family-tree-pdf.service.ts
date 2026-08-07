@@ -6,8 +6,9 @@ import { FamilyTree, FamilyMember, PdfOptions } from './family-tree.models';
 export class FamilyTreePdfService {
 
   async export(tree: FamilyTree, opts: PdfOptions, canvasEl: HTMLElement | null) {
-    const doc = new jsPDF('landscape', 'mm', 'a4');
+    const doc = new jsPDF(opts.orientation || 'landscape', 'mm', opts.paperSize || 'a4');
     const pw = doc.internal.pageSize.getWidth();
+    const ph = doc.internal.pageSize.getHeight();
 
     let members = [...tree.members];
     if (opts.exportMode === 'ancestors') {
@@ -35,10 +36,12 @@ export class FamilyTreePdfService {
         cards.forEach(card => {
           const l = parseFloat(card.style.left) || 0;
           const t = parseFloat(card.style.top)  || 0;
+          const w = card.offsetWidth || 160;
+          const h = card.offsetHeight || 90;
           minX = Math.min(minX, l);
           minY = Math.min(minY, t);
-          maxX = Math.max(maxX, l + 160);
-          maxY = Math.max(maxY, t + 90);
+          maxX = Math.max(maxX, l + w);
+          maxY = Math.max(maxY, t + h);
         });
         if (!cards.length) { minX = 0; minY = 0; maxX = 800; maxY = 500; }
 
@@ -53,11 +56,23 @@ export class FamilyTreePdfService {
           card.style.left = (parseFloat(card.style.left) + offsetX) + 'px';
           card.style.top  = (parseFloat(card.style.top)  + offsetY) + 'px';
         });
+
+        let svgGroup: SVGElement | null = null;
         if (svgEl) {
           svgEl.setAttribute('width',  String(totalW));
           svgEl.setAttribute('height', String(totalH));
-          svgEl.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
+          // Wrap all children of svgEl in a group tag with a transform attribute to shift them
+          svgGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g') as SVGElement;
+          svgGroup.setAttribute('transform', `translate(${offsetX}, ${offsetY})`);
+          while (svgEl.firstChild) {
+            svgGroup.appendChild(svgEl.firstChild);
+          }
+          svgEl.appendChild(svgGroup);
         }
+
+        // Temporarily hide action buttons and checkboxes inside cards without changing card height
+        const actionElements = Array.from(canvasEl.querySelectorAll<HTMLElement>('.ft-card-actions, .ft-card-check'));
+        actionElements.forEach(el => el.style.visibility = 'hidden');
 
         // Remove the CSS transform so html2canvas sees the real coordinates
         canvasEl.style.transform = 'none';
@@ -75,6 +90,7 @@ export class FamilyTreePdfService {
         });
 
         // Restore everything
+        actionElements.forEach(el => el.style.visibility = '');
         canvasEl.style.transform = originalTransform;
         canvasEl.style.width  = '';
         canvasEl.style.height = '';
@@ -85,17 +101,78 @@ export class FamilyTreePdfService {
         if (svgEl) {
           svgEl.removeAttribute('width');
           svgEl.removeAttribute('height');
-          svgEl.style.transform = '';
+          if (svgGroup) {
+            // Unwrap SVG children
+            while (svgGroup.firstChild) {
+              svgEl.appendChild(svgGroup.firstChild);
+            }
+            svgGroup.remove();
+          }
         }
 
-        const imgData = snapshot.toDataURL('image/jpeg', 0.85);
-        const ph = doc.internal.pageSize.getHeight();
-        const ratio = snapshot.height / snapshot.width;
-        const imgW = pw - 20;
-        const imgH = Math.min(imgW * ratio, ph - 30);
-        doc.setFontSize(14); doc.setFont('helvetica', 'bold');
-        doc.text('Family Tree', pw / 2, 12, { align: 'center' });
-        doc.addImage(imgData, 'JPEG', 10, 18, imgW, imgH);
+        if (opts.enableTiling) {
+          const cols = opts.tileCols || 2;
+          const rows = opts.tileRows || 2;
+          const sw = snapshot.width / cols;
+          const sh = snapshot.height / rows;
+
+          for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+              if (r > 0 || c > 0) {
+                doc.addPage();
+              }
+              const sx = c * sw;
+              const sy = r * sh;
+
+              const tileCanvas = document.createElement('canvas');
+              tileCanvas.width = sw;
+              tileCanvas.height = sh;
+              const tileCtx = tileCanvas.getContext('2d');
+              if (tileCtx) {
+                tileCtx.drawImage(snapshot, sx, sy, sw, sh, 0, 0, sw, sh);
+              }
+              const imgData = tileCanvas.toDataURL('image/jpeg', 0.85);
+              const imgW = pw - 20;
+              const imgH = ph - 30;
+
+              // Title / position header
+              doc.setFontSize(10);
+              doc.setFont('helvetica', 'bold');
+              doc.setTextColor(50);
+              doc.text(`Family Tree Poster - Sheet [Row ${r+1}, Col ${c+1}] of [${rows}x${cols}]`, pw / 2, 10, { align: 'center' });
+
+              // Image content
+              doc.addImage(imgData, 'JPEG', 10, 14, imgW, imgH);
+
+              // Draw joining alignment border
+              doc.setDrawColor(180);
+              doc.setLineDashPattern([1, 2], 0);
+              doc.rect(10, 14, imgW, imgH, 'S');
+              doc.setLineDashPattern([], 0);
+
+              // Grid paste instructions
+              let inst = [];
+              if (c > 0) inst.push(`Left edge: Align with Col ${c}`);
+              if (c < cols - 1) inst.push(`Right edge: Align with Col ${c+2}`);
+              if (r > 0) inst.push(`Top edge: Align with Row ${r}`);
+              if (r < rows - 1) inst.push(`Bottom edge: Align with Row ${r+2}`);
+
+              const instText = inst.length > 0 ? `✂️ JOINING GUIDE: ${inst.join('  |  ')}` : 'Single Page';
+              doc.setFontSize(8);
+              doc.setFont('helvetica', 'normal');
+              doc.setTextColor(100);
+              doc.text(instText, pw / 2, ph - 8, { align: 'center' });
+            }
+          }
+        } else {
+          const imgData = snapshot.toDataURL('image/jpeg', 0.85);
+          const ratio = snapshot.height / snapshot.width;
+          const imgW = pw - 20;
+          const imgH = Math.min(imgW * ratio, ph - 30);
+          doc.setFontSize(14); doc.setFont('helvetica', 'bold');
+          doc.text('Family Tree', pw / 2, 12, { align: 'center' });
+          doc.addImage(imgData, 'JPEG', 10, 18, imgW, imgH);
+        }
       } catch (e) { console.warn('Tree snapshot failed', e); }
     }
 
@@ -123,11 +200,18 @@ export class FamilyTreePdfService {
 
       let lastGen: number | null = null;
 
+      const maxW = pw - marginX * 2 - 12;
+
       for (const m of sorted) {
-        checkPage(lineH * 8);
+        const isGenChange = m.generation !== lastGen;
+        const cardH = lineH * (this.countLines(m, opts, doc, maxW)) + 4;
+        const headerH = isGenChange ? 14 : 0;
+        const needed = cardH + headerH + 6;
+
+        checkPage(needed);
 
         // Generation header
-        if (m.generation !== lastGen) {
+        if (isGenChange) {
           lastGen = m.generation;
           y += 4;
           const [cr, cg, cb] = this.hexToRgb(this.genColor(m.generation));
@@ -140,7 +224,7 @@ export class FamilyTreePdfService {
 
         // Member card
         doc.setDrawColor(220); doc.setFillColor(252, 252, 252);
-        doc.roundedRect(marginX, y - 4, pw - marginX * 2, lineH * (this.countLines(m, opts)) + 4, 2, 2, 'FD');
+        doc.roundedRect(marginX, y - 4, pw - marginX * 2, cardH, 2, 2, 'FD');
 
         doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
         const genderDot = m.gender === 'male' ? '♂' : m.gender === 'female' ? '♀' : '⚧';
@@ -153,7 +237,6 @@ export class FamilyTreePdfService {
         if (opts.includeGender)              { doc.text(`Gender: ${m.gender}`, marginX + 8, row); row += lineH; }
 
         if (opts.includeSpouse && m.spouseId) {
-          // We don't have tree ref here but we pass it in as sorted
           const sp = sorted.find(x => x.id === m.spouseId);
           if (sp) { doc.text(`Spouse: ${sp.name}`, marginX + 8, row); row += lineH; }
         }
@@ -166,7 +249,7 @@ export class FamilyTreePdfService {
           doc.text(`Children: ${cNames}`, marginX + 8, row); row += lineH;
         }
         if (opts.includeNotes && m.notes) {
-          const wrapped = doc.splitTextToSize(`Notes: ${m.notes}`, pw - marginX * 2 - 12);
+          const wrapped = doc.splitTextToSize(`Notes: ${m.notes}`, maxW);
           doc.text(wrapped, marginX + 8, row); row += lineH * wrapped.length;
         }
         if (opts.includeCustomFields && m.customFields.length) {
@@ -174,21 +257,23 @@ export class FamilyTreePdfService {
         }
 
         y = row + 6;
-        checkPage();
       }
     }
 
     doc.save(`family-tree-${Date.now()}.pdf`);
   }
 
-  private countLines(m: FamilyMember, opts: PdfOptions): number {
+  private countLines(m: FamilyMember, opts: PdfOptions, doc: jsPDF, maxW: number): number {
     let n = 1;
     if (opts.includeAge && m.age) n++;
     if (opts.includeGender) n++;
     if (opts.includeSpouse && m.spouseId) n++;
     if (opts.includeParents && m.parentIds.length) n++;
     if (opts.includeChildren && m.childIds.length) n++;
-    if (opts.includeNotes && m.notes) n++;
+    if (opts.includeNotes && m.notes) {
+      const wrapped = doc.splitTextToSize(`Notes: ${m.notes}`, maxW);
+      n += wrapped.length;
+    }
     if (opts.includeCustomFields) n += m.customFields.length;
     return n;
   }

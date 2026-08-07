@@ -65,6 +65,11 @@ export interface PdfOptions {
   exportGroupId: 'all' | string;
   layoutExport: boolean;
   reportExport: boolean;
+  paperSize: 'a4' | 'a3' | 'letter' | 'legal';
+  orientation: 'landscape' | 'portrait';
+  enableTiling: boolean;
+  tileCols: number;
+  tileRows: number;
 }
 
 export const RELATIONSHIP_TYPES: RelationshipType[] = [
@@ -80,5 +85,6 @@ export const DEFAULT_PDF_OPTIONS: PdfOptions = {
   includePhoto: true, includeAge: true, includeGender: true,
   includeRelationship: true, includeSpouse: true, includeParents: true,
   includeChildren: true, includeNotes: true, includeCustomFields: true,
-  exportMode: 'full', exportGroupId: 'all', layoutExport: true, reportExport: true
+  exportMode: 'full', exportGroupId: 'all', layoutExport: true, reportExport: true,
+  paperSize: 'a4', orientation: 'landscape', enableTiling: false, tileCols: 2, tileRows: 2
 };
